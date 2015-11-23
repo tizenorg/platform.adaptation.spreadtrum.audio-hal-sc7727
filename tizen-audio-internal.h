@@ -68,6 +68,12 @@
         return val; \
     } \
 } while (0)
+#define AUDIO_RETURN_NULL_IF_FAIL(expr) do { \
+    if (!expr) { \
+        AUDIO_LOG_ERROR("%s failed", #expr); \
+        return NULL; \
+    } \
+} while (0)
 
 /* Devices : Normal  */
 enum audio_device_type {
@@ -160,7 +166,7 @@ typedef struct audio_device_mgr {
     pthread_mutex_t pcm_lock;
     uint32_t pcm_count;
     audio_route_mode_t mode;
-} audio_device_mgr_t;
+} audio_hal_device_t;
 
 
 /* Stream */
@@ -178,16 +184,16 @@ enum {
     AUDIO_VOLUME_DEVICE_MAX,
 };
 
-typedef struct audio_volume_mgr {
+typedef struct audio_hal_volume {
     uint32_t volume_level[AUDIO_VOLUME_TYPE_MAX];
     audio_volume_value_table_t *volume_value_table;
-} audio_volume_mgr_t;
+} audio_hal_volume_t;
 
-typedef struct audio_ucm_mgr {
+typedef struct audio_hal_ucm {
     snd_use_case_mgr_t* uc_mgr;
-} audio_ucm_mgr_t;
+} audio_hal_ucm_t;
 
-typedef struct audio_mixer_mgr {
+typedef struct audio_hal_mixer {
     snd_mixer_t *mixer;
     pthread_mutex_t mutex;
     struct {
@@ -195,16 +201,16 @@ typedef struct audio_mixer_mgr {
         snd_ctl_elem_id_t *id;
         snd_ctl_elem_info_t *info;
     } control;
-} audio_mixer_mgr_t;
+} audio_hal_mixer_t;
 
 /* Overall */
 
-typedef struct audio_mgr {
-    audio_device_mgr_t device;
-    audio_volume_mgr_t volume;
-    audio_ucm_mgr_t ucm;
-    audio_mixer_mgr_t mixer;
-} audio_mgr_t;
+typedef struct audio_hal {
+    audio_hal_device_t device;
+    audio_hal_volume_t volume;
+    audio_hal_ucm_t ucm;
+    audio_hal_mixer_t mixer;
+} audio_hal_t;
 
 typedef struct {
     unsigned short      is_open; /* if is_open is true, open device; else close device.*/
@@ -217,30 +223,30 @@ typedef struct samplerate_ctrl {
     unsigned int samplerate; /* change samplerate.*/
 } set_samplerate_t;
 
-audio_return_t _audio_volume_init (audio_mgr_t *am);
-audio_return_t _audio_volume_deinit (audio_mgr_t *am);
+audio_return_t _audio_volume_init(audio_hal_t *ah);
+audio_return_t _audio_volume_deinit(audio_hal_t *ah);
 
-audio_return_t _audio_device_init (audio_mgr_t *am);
-audio_return_t _audio_device_deinit (audio_mgr_t * am);
-audio_return_t _audio_ucm_init (audio_mgr_t *am);
-audio_return_t _audio_ucm_deinit (audio_mgr_t *am);
-void _audio_ucm_get_device_name (audio_mgr_t *am, const char *use_case, audio_direction_t direction, const char **value);
+audio_return_t _audio_device_init(audio_hal_t *ah);
+audio_return_t _audio_device_deinit(audio_hal_t * am);
+audio_return_t _audio_ucm_init(audio_hal_t *ah);
+audio_return_t _audio_ucm_deinit(audio_hal_t *ah);
+void _audio_ucm_get_device_name(audio_hal_t *ah, const char *use_case, audio_direction_t direction, const char **value);
 #define _audio_ucm_update_use_case _audio_ucm_set_use_case
-audio_return_t _audio_ucm_set_use_case (audio_mgr_t *am, const char *verb, const char *devices[], const char *modifiers[]);
-audio_return_t _audio_ucm_set_devices (audio_mgr_t *am, const char *verb, const char *devices[]);
-audio_return_t _audio_ucm_set_modifiers (audio_mgr_t *am, const char *verb, const char *modifiers[]);
-int _audio_ucm_fill_device_info_list (audio_mgr_t *am, audio_device_info_t *device_info_list, const char *verb);
-int _voice_pcm_open(audio_mgr_t *am);
-int _voice_pcm_close(audio_mgr_t *am, uint32_t direction);
-audio_return_t _audio_ucm_get_verb (audio_mgr_t *am, const char **value);
-audio_return_t _audio_ucm_reset_use_case (audio_mgr_t *am);
-audio_return_t _audio_util_init (audio_mgr_t *am);
-audio_return_t _audio_util_deinit (audio_mgr_t *am);
-audio_return_t _audio_mixer_control_set_param(audio_mgr_t *am, const char* ctl_name, snd_ctl_elem_value_t* value, int size);
-audio_return_t _audio_mixer_control_set_value(audio_mgr_t *am, const char *ctl_name, int val);
-audio_return_t _audio_mixer_control_set_value_string(audio_mgr_t *am, const char* ctl_name, const char* value);
-audio_return_t _audio_mixer_control_get_value(audio_mgr_t *am, const char *ctl_name, int *val);
-audio_return_t _audio_mixer_control_get_element(audio_mgr_t *am, const char *ctl_name, snd_hctl_elem_t **elem);
+audio_return_t _audio_ucm_set_use_case(audio_hal_t *ah, const char *verb, const char *devices[], const char *modifiers[]);
+audio_return_t _audio_ucm_set_devices(audio_hal_t *ah, const char *verb, const char *devices[]);
+audio_return_t _audio_ucm_set_modifiers(audio_hal_t *ah, const char *verb, const char *modifiers[]);
+int _audio_ucm_fill_device_info_list(audio_hal_t *ah, audio_device_info_t *device_info_list, const char *verb);
+int _voice_pcm_open(audio_hal_t *ah);
+int _voice_pcm_close(audio_hal_t *ah, uint32_t direction);
+audio_return_t _audio_ucm_get_verb(audio_hal_t *ah, const char **value);
+audio_return_t _audio_ucm_reset_use_case(audio_hal_t *ah);
+audio_return_t _audio_util_init (audio_hal_t *ah);
+audio_return_t _audio_util_deinit (audio_hal_t *ah);
+audio_return_t _audio_mixer_control_set_param(audio_hal_t *ah, const char* ctl_name, snd_ctl_elem_value_t* value, int size);
+audio_return_t _audio_mixer_control_set_value(audio_hal_t *ah, const char *ctl_name, int val);
+audio_return_t _audio_mixer_control_set_value_string(audio_hal_t *ah, const char* ctl_name, const char* value);
+audio_return_t _audio_mixer_control_get_value(audio_hal_t *ah, const char *ctl_name, int *val);
+audio_return_t _audio_mixer_control_get_element(audio_hal_t *ah, const char *ctl_name, snd_hctl_elem_t **elem);
 audio_return_t _audio_pcm_set_sw_params(snd_pcm_t *pcm, snd_pcm_uframes_t avail_min, uint8_t period_event);
 audio_return_t _audio_pcm_set_hw_params(snd_pcm_t *pcm, audio_pcm_sample_spec_t *sample_spec, uint8_t *use_mmap, snd_pcm_uframes_t *period_size, snd_pcm_uframes_t *buffer_size);
 uint32_t _convert_format(audio_sample_format_t format);
