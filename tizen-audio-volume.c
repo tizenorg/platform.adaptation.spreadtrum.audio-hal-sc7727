@@ -46,7 +46,7 @@ static const char *g_volume_vconf[AUDIO_VOLUME_TYPE_MAX] = {
     "file/private/sound/volume/voice",          /* AUDIO_VOLUME_TYPE_VOICE */
 };
 
-static const char *__get_volume_type_string_by_idx (uint32_t vol_type_idx)
+static const char *__get_volume_type_string_by_idx(uint32_t vol_type_idx)
 {
     switch (vol_type_idx) {
     case AUDIO_VOLUME_TYPE_SYSTEM:          return "system";
@@ -61,7 +61,7 @@ static const char *__get_volume_type_string_by_idx (uint32_t vol_type_idx)
     }
 }
 
-static uint32_t __get_volume_idx_by_string_type (const char *vol_type)
+static uint32_t __get_volume_idx_by_string_type(const char *vol_type)
 {
     if (!strncmp(vol_type, "system", strlen(vol_type)) || !strncmp(vol_type, "0", strlen(vol_type)))
         return AUDIO_VOLUME_TYPE_SYSTEM;
@@ -83,7 +83,7 @@ static uint32_t __get_volume_idx_by_string_type (const char *vol_type)
         return AUDIO_VOLUME_TYPE_MEDIA;
 }
 
-static const char *__get_gain_type_string_by_idx (uint32_t gain_type_idx)
+static const char *__get_gain_type_string_by_idx(uint32_t gain_type_idx)
 {
     switch (gain_type_idx) {
     case AUDIO_GAIN_TYPE_DEFAULT:           return "default";
@@ -101,7 +101,7 @@ static const char *__get_gain_type_string_by_idx (uint32_t gain_type_idx)
     }
 }
 
-static void __dump_tb (audio_hal_t *ah)
+static void __dump_tb(audio_hal_t *ah)
 {
     audio_volume_value_table_t *volume_value_table = ah->volume.volume_value_table;
     uint32_t vol_type_idx, vol_level_idx, gain_type_idx;
@@ -173,7 +173,7 @@ static void __dump_tb (audio_hal_t *ah)
 
 }
 
-static audio_return_t __load_volume_value_table_from_ini (audio_hal_t *ah)
+static audio_return_t __load_volume_value_table_from_ini(audio_hal_t *ah)
 {
     dictionary * dict = NULL;
     uint32_t vol_type_idx, vol_level_idx, gain_type_idx;
@@ -252,7 +252,7 @@ static audio_return_t __load_volume_value_table_from_ini (audio_hal_t *ah)
     return AUDIO_RET_OK;
 }
 
-audio_return_t _audio_volume_init (audio_hal_t *ah)
+audio_return_t _audio_volume_init(audio_hal_t *ah)
 {
     int i;
     int val = 0;
@@ -290,7 +290,7 @@ audio_return_t _audio_volume_init (audio_hal_t *ah)
     return audio_ret;
 }
 
-audio_return_t _audio_volume_deinit (audio_hal_t *ah)
+audio_return_t _audio_volume_deinit(audio_hal_t *ah)
 {
     AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
 

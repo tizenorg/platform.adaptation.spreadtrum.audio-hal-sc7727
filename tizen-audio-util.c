@@ -413,7 +413,7 @@ audio_return_t _audio_pcm_set_sw_params(snd_pcm_t *pcm, snd_pcm_uframes_t avail_
 
     snd_pcm_sw_params_alloca(&swparams);
 
-    if ((err = snd_pcm_sw_params_current(pcm, swparams) < 0)) {
+    if ((err = snd_pcm_sw_params_current(pcm, swparams)) < 0) {
         AUDIO_LOG_WARN("Unable to determine current swparams: %s\n", snd_strerror(err));
         goto error;
     }
