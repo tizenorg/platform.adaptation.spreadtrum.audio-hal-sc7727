@@ -312,8 +312,8 @@ int _voice_pcm_open(audio_hal_t *ah);
 int _voice_pcm_close(audio_hal_t *ah, uint32_t direction);
 audio_return_t _audio_ucm_get_verb(audio_hal_t *ah, const char **value);
 audio_return_t _audio_ucm_reset_use_case(audio_hal_t *ah);
-audio_return_t _audio_util_init (audio_hal_t *ah);
-audio_return_t _audio_util_deinit (audio_hal_t *ah);
+audio_return_t _audio_util_init(audio_hal_t *ah);
+audio_return_t _audio_util_deinit(audio_hal_t *ah);
 audio_return_t _audio_mixer_control_set_param(audio_hal_t *ah, const char* ctl_name, snd_ctl_elem_value_t* value, int size);
 audio_return_t _audio_mixer_control_set_value(audio_hal_t *ah, const char *ctl_name, int val);
 audio_return_t _audio_mixer_control_set_value_string(audio_hal_t *ah, const char* ctl_name, const char* value);
@@ -322,4 +322,16 @@ audio_return_t _audio_mixer_control_get_element(audio_hal_t *ah, const char *ctl
 audio_return_t _audio_pcm_set_sw_params(snd_pcm_t *pcm, snd_pcm_uframes_t avail_min, uint8_t period_event);
 audio_return_t _audio_pcm_set_hw_params(snd_pcm_t *pcm, audio_pcm_sample_spec_t *sample_spec, uint8_t *use_mmap, snd_pcm_uframes_t *period_size, snd_pcm_uframes_t *buffer_size);
 uint32_t _convert_format(audio_sample_format_t format);
+
+typedef struct _dump_data {
+    char *strbuf;
+    int left;
+    char *p;
+} dump_data_t;
+
+dump_data_t* dump_new(int length);
+void dump_add_str(dump_data_t *dump, const char *fmt, ...);
+char* dump_get_str(dump_data_t *dump);
+void dump_free(dump_data_t *dump);
+
 #endif
