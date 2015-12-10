@@ -76,27 +76,27 @@
 } while (0)
 
 /* Devices : Normal  */
+#define AUDIO_DEVICE_OUT               0x00000000
+#define AUDIO_DEVICE_IN                0x80000000
 enum audio_device_type {
     AUDIO_DEVICE_NONE                 = 0,
 
     /* output devices */
-    AUDIO_DEVICE_OUT_SPEAKER          = 0x00000001,
-    AUDIO_DEVICE_OUT_RECEIVER         = 0x00000002,
-    AUDIO_DEVICE_OUT_JACK             = 0x00000004,
-    AUDIO_DEVICE_OUT_BT_SCO           = 0x00000008,
-    AUDIO_DEVICE_OUT_AUX              = 0x00000010,
-    AUDIO_DEVICE_OUT_HDMI             = 0x00000020,
+    AUDIO_DEVICE_OUT_SPEAKER          = AUDIO_DEVICE_OUT | 0x00000001,
+    AUDIO_DEVICE_OUT_RECEIVER         = AUDIO_DEVICE_OUT | 0x00000002,
+    AUDIO_DEVICE_OUT_JACK             = AUDIO_DEVICE_OUT | 0x00000004,
+    AUDIO_DEVICE_OUT_BT_SCO           = AUDIO_DEVICE_OUT | 0x00000008,
+    AUDIO_DEVICE_OUT_HDMI             = AUDIO_DEVICE_OUT | 0x00000010,
     AUDIO_DEVICE_OUT_ALL              = (AUDIO_DEVICE_OUT_SPEAKER |
                                          AUDIO_DEVICE_OUT_RECEIVER |
                                          AUDIO_DEVICE_OUT_JACK |
                                          AUDIO_DEVICE_OUT_BT_SCO |
-                                         AUDIO_DEVICE_OUT_AUX |
                                          AUDIO_DEVICE_OUT_HDMI),
     /* input devices */
-    AUDIO_DEVICE_IN_MAIN_MIC          = 0x80000001,
-    AUDIO_DEVICE_IN_SUB_MIC           = 0x80000002,
-    AUDIO_DEVICE_IN_JACK              = 0x80000004,
-    AUDIO_DEVICE_IN_BT_SCO            = 0x80000008,
+    AUDIO_DEVICE_IN_MAIN_MIC          = AUDIO_DEVICE_IN | 0x00000001,
+    AUDIO_DEVICE_IN_SUB_MIC           = AUDIO_DEVICE_IN | 0x00000002,
+    AUDIO_DEVICE_IN_JACK              = AUDIO_DEVICE_IN | 0x00000004,
+    AUDIO_DEVICE_IN_BT_SCO            = AUDIO_DEVICE_IN | 0x00000008,
     AUDIO_DEVICE_IN_ALL               = (AUDIO_DEVICE_IN_MAIN_MIC |
                                          AUDIO_DEVICE_IN_SUB_MIC |
                                          AUDIO_DEVICE_IN_JACK |
@@ -127,7 +127,7 @@ typedef struct device_type {
 #define strneq strcmp
 
 #define ALSA_DEFAULT_CARD       "sprdphone"
-#define VOICE_PCM_DEVICE        "hw:0,1"
+#define VOICE_PCM_DEVICE        "hw:sprdphone,1"
 #define PLAYBACK_PCM_DEVICE     "hw:sprdphone,0"
 #define CAPTURE_PCM_DEVICE      "hw:sprdphone,0"
 

@@ -35,7 +35,6 @@ static device_type_t outDeviceTypes[] = {
     { AUDIO_DEVICE_OUT_RECEIVER, "Earpiece" },
     { AUDIO_DEVICE_OUT_JACK, "Headphones" },
     { AUDIO_DEVICE_OUT_BT_SCO, "Bluetooth" },
-    { AUDIO_DEVICE_OUT_AUX, "Line" },
     { AUDIO_DEVICE_OUT_HDMI, "HDMI" },
     { 0, 0 },
 };
@@ -60,8 +59,6 @@ static uint32_t convert_device_string_to_enum(const char* device_str, uint32_t d
         device = AUDIO_DEVICE_OUT_JACK;
     } else if ((!strncmp(device_str,"bt", MAX_NAME_LEN)) && (direction == AUDIO_DIRECTION_OUT)) {
         device = AUDIO_DEVICE_OUT_BT_SCO;
-    } else if (!strncmp(device_str,"aux", MAX_NAME_LEN)) {
-        device = AUDIO_DEVICE_OUT_AUX;
     } else if (!strncmp(device_str,"hdmi", MAX_NAME_LEN)) {
         device = AUDIO_DEVICE_OUT_HDMI;
     } else if ((!strncmp(device_str,"builtin-mic", MAX_NAME_LEN))) {
@@ -97,7 +94,7 @@ static audio_return_t set_devices(audio_hal_t *ah, const char *verb, device_info
     if ((devices[0].direction == AUDIO_DIRECTION_OUT) && ah->device.active_in) {
         /* check the active in devices */
         for (j = 0; j < inDeviceTypes[j].type; j++) {
-            if (((ah->device.active_in & (~0x80000000)) & inDeviceTypes[j].type))
+            if (((ah->device.active_in & (~AUDIO_DEVICE_IN)) & inDeviceTypes[j].type))
                 active_devices[dev_idx++] = inDeviceTypes[j].name;
         }
     } else if ((devices[0].direction == AUDIO_DIRECTION_IN) && ah->device.active_out) {
@@ -110,7 +107,7 @@ static audio_return_t set_devices(audio_hal_t *ah, const char *verb, device_info
 
     for (i = 0; i < num_of_devices; i++) {
         new_device = convert_device_string_to_enum(devices[i].type, devices[i].direction);
-        if (new_device & 0x80000000) {
+        if (new_device & AUDIO_DEVICE_IN) {
             for (j = 0; j < inDeviceTypes[j].type; j++) {
                 if (new_device == inDeviceTypes[j].type) {
                     active_devices[dev_idx++] = inDeviceTypes[j].name;
