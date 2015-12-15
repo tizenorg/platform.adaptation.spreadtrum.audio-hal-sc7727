@@ -1,6 +1,6 @@
 Name:       audio-hal-sc7727
 Summary:    TIZEN Audio HAL for SC7727
-Version:    0.1.2
+Version:    0.1.3
 Release:    0
 Group:      System/Libraries
 License:    Apache-2.0
@@ -11,6 +11,7 @@ BuildRequires: pkgconfig(iniparser)
 BuildRequires: pkgconfig(dlog)
 BuildRequires: pkgconfig(alsa)
 #BuildRequires: pkgconfig(tinyalsa)
+BuildRequires: expat-devel
 Provides: libtizen-audio.so
 
 %description
