@@ -47,6 +47,10 @@ PKG_CHECK_MODULES(DLOG, dlog)
 AC_SUBST(DLOG_CFLAGS)
 AC_SUBST(DLOG_LIBS)
 
+PKG_CHECK_MODULES(EXPAT, expat)
+AC_SUBST(EXPAT_CFLAGS)
+AC_SUBST(EXPAT_LIBS)
+
 # Checks for header files.
 
 # Checks for typedefs, structures, and compiler characteristics.
