@@ -56,7 +56,10 @@ audio_return_t audio_init(void **audio_handle)
         AUDIO_LOG_ERROR("mixer init failed");
         goto error_exit;
     }
-
+    if (AUDIO_IS_ERROR((ret = _audio_modem_init(ah)))) {
+        AUDIO_LOG_ERROR("modem init failed");
+        goto error_exit;
+    }
     *audio_handle = (void *)ah;
     return AUDIO_RET_OK;
 
@@ -77,6 +80,7 @@ audio_return_t audio_deinit(void *audio_handle)
     _audio_volume_deinit(ah);
     _audio_ucm_deinit(ah);
     _audio_util_deinit(ah);
+    _audio_modem_deinit(ah);
     free(ah);
     ah = NULL;
 
