@@ -86,12 +86,10 @@ enum audio_device_type {
     AUDIO_DEVICE_OUT_RECEIVER         = AUDIO_DEVICE_OUT | 0x00000002,
     AUDIO_DEVICE_OUT_JACK             = AUDIO_DEVICE_OUT | 0x00000004,
     AUDIO_DEVICE_OUT_BT_SCO           = AUDIO_DEVICE_OUT | 0x00000008,
-    AUDIO_DEVICE_OUT_HDMI             = AUDIO_DEVICE_OUT | 0x00000010,
     AUDIO_DEVICE_OUT_ALL              = (AUDIO_DEVICE_OUT_SPEAKER |
                                          AUDIO_DEVICE_OUT_RECEIVER |
                                          AUDIO_DEVICE_OUT_JACK |
-                                         AUDIO_DEVICE_OUT_BT_SCO |
-                                         AUDIO_DEVICE_OUT_HDMI),
+                                         AUDIO_DEVICE_OUT_BT_SCO),
     /* input devices */
     AUDIO_DEVICE_IN_MAIN_MIC          = AUDIO_DEVICE_IN | 0x00000001,
     AUDIO_DEVICE_IN_SUB_MIC           = AUDIO_DEVICE_IN | 0x00000002,
@@ -111,17 +109,14 @@ typedef struct device_type {
 /* Verbs */
 #define AUDIO_USE_CASE_VERB_INACTIVE                "Inactive"
 #define AUDIO_USE_CASE_VERB_HIFI                    "HiFi"
-#define AUDIO_USE_CASE_VERB_VOICECALL               "VoiceCall"
+#define AUDIO_USE_CASE_VERB_VOICECALL               "Voice"
 #define AUDIO_USE_CASE_VERB_LOOPBACK                "Loopback"
-#define AUDIO_USE_CASE_VERB_FMRADIO                 "FM_Radio"
+#define AUDIO_USE_CASE_VERB_VIDEOCALL               "Video"
 
 /* Modifiers */
 #define AUDIO_USE_CASE_MODIFIER_VOICESEARCH              "VoiceSearch"
 #define AUDIO_USE_CASE_MODIFIER_CAMCORDING               "Camcording"
 #define AUDIO_USE_CASE_MODIFIER_RINGTONE                 "Ringtone"
-#define AUDIO_USE_CASE_MODIFIER_DUAL_RINGTONE            "DualRingtone"
-#define AUDIO_USE_CASE_MODIFIER_MEDIA                    "Media"
-#define AUDIO_USE_CASE_MODIFIER_DUAL_MEDIA               "DualMedia"
 
 #define streq !strcmp
 #define strneq strcmp

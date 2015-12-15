@@ -35,7 +35,6 @@ static device_type_t outDeviceTypes[] = {
     { AUDIO_DEVICE_OUT_RECEIVER, "Earpiece" },
     { AUDIO_DEVICE_OUT_JACK, "Headphones" },
     { AUDIO_DEVICE_OUT_BT_SCO, "Bluetooth" },
-    { AUDIO_DEVICE_OUT_HDMI, "HDMI" },
     { 0, 0 },
 };
 
@@ -59,8 +58,6 @@ static uint32_t convert_device_string_to_enum(const char* device_str, uint32_t d
         device = AUDIO_DEVICE_OUT_JACK;
     } else if ((!strncmp(device_str, "bt", MAX_NAME_LEN)) && (direction == AUDIO_DIRECTION_OUT)) {
         device = AUDIO_DEVICE_OUT_BT_SCO;
-    } else if (!strncmp(device_str, "hdmi", MAX_NAME_LEN)) {
-        device = AUDIO_DEVICE_OUT_HDMI;
     } else if ((!strncmp(device_str, "builtin-mic", MAX_NAME_LEN))) {
         device = AUDIO_DEVICE_IN_MAIN_MIC;
     /* To Do : SUB_MIC */
@@ -165,15 +162,15 @@ static audio_return_t _do_route_ap_playback_capture(audio_hal_t *ah, audio_route
     audio_return_t audio_ret = AUDIO_RET_OK;
     device_info_t *devices = NULL;
     const char *verb = NULL;
+#if 0  /* Disable setting modifiers, because driver does not support it yet */
+    int mod_idx = 0;
+    const char *modifiers[MAX_MODIFIERS] = {NULL,};
+#endif
 
     AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
     AUDIO_RETURN_VAL_IF_FAIL(route_info, AUDIO_ERR_PARAMETER);
 
     devices = route_info->device_infos;
-
-    /* To Do: Set modifiers */
-    /* int mod_idx = 0; */
-    /* const char *modifiers[MAX_MODIFIERS] = {NULL,}; */
 
     verb = AUDIO_USE_CASE_VERB_HIFI;
     AUDIO_LOG_INFO("do_route_ap_playback_capture++ ");
@@ -185,8 +182,8 @@ static audio_return_t _do_route_ap_playback_capture(audio_hal_t *ah, audio_route
     }
     ah->device.mode = VERB_NORMAL;
 
-    /* To Do: Set modifiers */
-    /*
+#if 0 /* Disable setting modifiers, because driver does not support it yet */
+    /* Set modifiers */
     if (!strncmp("voice_recognition", route_info->role, MAX_NAME_LEN)) {
         modifiers[mod_idx++] = AUDIO_USE_CASE_MODIFIER_VOICESEARCH;
     } else if ((!strncmp("alarm", route_info->role, MAX_NAME_LEN))||(!strncmp("notifiication", route_info->role, MAX_NAME_LEN))) {
@@ -195,9 +192,7 @@ static audio_return_t _do_route_ap_playback_capture(audio_hal_t *ah, audio_route
         else
             modifiers[mod_idx++] = AUDIO_USE_CASE_MODIFIER_MEDIA;
     } else if (!strncmp("ringtone", route_info->role, MAX_NAME_LEN)) {
-        if (ah->device.active_out &= AUDIO_DEVICE_OUT_JACK)
-            modifiers[mod_idx++] = AUDIO_USE_CASE_MODIFIER_DUAL_RINGTONE;
-        else
+        if (ah->device.active_out)
             modifiers[mod_idx++] = AUDIO_USE_CASE_MODIFIER_RINGTONE;
     } else {
         if (ah->device.active_in)
@@ -206,8 +201,7 @@ static audio_return_t _do_route_ap_playback_capture(audio_hal_t *ah, audio_route
             modifiers[mod_idx++] = AUDIO_USE_CASE_MODIFIER_MEDIA;
     }
     audio_ret = _audio_ucm_set_modifiers (ah, verb, modifiers);
-    */
-
+#endif
     return audio_ret;
 }
 audio_return_t _do_route_voicecall(audio_hal_t *ah, device_info_t *devices, int32_t num_of_devices)
@@ -374,7 +368,7 @@ static int __voice_pcm_set_params(audio_hal_t *ah, snd_pcm_t *pcm)
         AUDIO_LOG_ERROR("snd_pcm_hw_params_set_access() : failed! - %s\n", snd_strerror(err));
         goto error;
     }
-    err = snd_pcm_hw_params_set_rate(pcm, params, 16000, 0);
+    err = snd_pcm_hw_params_set_rate(pcm, params, 8000, 0);
     if (err < 0) {
         AUDIO_LOG_ERROR("snd_pcm_hw_params_set_rate() : failed! - %s\n", snd_strerror(err));
     }
