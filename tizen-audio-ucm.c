@@ -128,9 +128,11 @@ int _audio_ucm_fill_device_info_list(audio_hal_t *ah, audio_device_info_t *devic
         if (strncmp(verb, AUDIO_USE_CASE_VERB_VOICECALL, strlen(AUDIO_USE_CASE_VERB_VOICECALL)) &&
             strncmp(verb, AUDIO_USE_CASE_VERB_LOOPBACK, strlen(AUDIO_USE_CASE_VERB_LOOPBACK))) {
             __add_ucm_device_info(ah, verb, AUDIO_DIRECTION_IN, device_info_list, &device_info_count);
-            if (strncmp(verb, AUDIO_USE_CASE_VERB_FMRADIO, strlen(AUDIO_USE_CASE_VERB_FMRADIO))) {
+#if 0
+            if(strncmp(verb, AUDIO_USE_CASE_VERB_FMRADIO, strlen(AUDIO_USE_CASE_VERB_FMRADIO))) {
                 __add_ucm_device_info(ah, verb, AUDIO_DIRECTION_OUT, device_info_list, &device_info_count);
             }
+#endif
         }
 
         if (curr_verb)
@@ -515,7 +517,7 @@ audio_return_t _audio_ucm_set_devices(audio_hal_t *ah, const char *verb, const c
     } else {
         is_verb_changed = 1;
 
-        AUDIO_LOG_DEBUG("Setting new verb: %s", verb);
+        AUDIO_LOG_INFO("Setting new verb: %s", verb);
         /* set new verb */
         if (snd_use_case_set(ah->ucm.uc_mgr, "_verb", verb) < 0) {
             AUDIO_LOG_ERROR("Setting verb %s failed", verb);
@@ -524,7 +526,7 @@ audio_return_t _audio_ucm_set_devices(audio_hal_t *ah, const char *verb, const c
         }
         /* enable devices */
         for (i = 0; i < dev_count; i++) {
-            AUDIO_LOG_DEBUG("Enable device : %s", devices[i]);
+            AUDIO_LOG_INFO("Enable device : %s", devices[i]);
             if (snd_use_case_set(ah->ucm.uc_mgr, "_enadev", devices[i]) < 0)
                 AUDIO_LOG_ERROR("Enable %s device failed", devices[i]);
         }
