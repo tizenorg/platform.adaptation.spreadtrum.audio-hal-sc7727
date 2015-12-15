@@ -30,6 +30,7 @@
 #include <pthread.h>
 #include <use-case.h>
 #include "tizen-audio.h"
+#include "vb_control_parameters.h"
 
 /* Debug */
 
@@ -75,6 +76,26 @@
     } \
 } while (0)
 
+#define MUTEX_LOCK(x_lock, lock_name) { \
+    AUDIO_LOG_DEBUG("try lock [%s]", lock_name); \
+    pthread_mutex_lock(&(x_lock)); \
+    AUDIO_LOG_DEBUG("after lock [%s]", lock_name); \
+}
+#define MUTEX_UNLOCK(x_lock, lock_name) { \
+    AUDIO_LOG_DEBUG("try unlock [%s]", lock_name); \
+    pthread_mutex_unlock(&(x_lock)); \
+    AUDIO_LOG_DEBUG("after unlock [%s]", lock_name); \
+}
+#define COND_WAIT(x_cond, x_lock, cond_name) { \
+    AUDIO_LOG_DEBUG("try cond wait [%s]", cond_name); \
+    pthread_cond_wait(&(x_cond), &(x_lock)); \
+    AUDIO_LOG_DEBUG("awaken cond [%s]", cond_name); \
+}
+#define COND_SIGNAL(x_cond, cond_name) { \
+    AUDIO_LOG_DEBUG("send signal to cond [%s]", cond_name); \
+    pthread_cond_signal(&(x_cond)); \
+}
+
 /* Devices : Normal  */
 #define AUDIO_DEVICE_OUT               0x00000000
 #define AUDIO_DEVICE_IN                0x80000000
@@ -86,12 +107,10 @@ enum audio_device_type {
     AUDIO_DEVICE_OUT_RECEIVER         = AUDIO_DEVICE_OUT | 0x00000002,
     AUDIO_DEVICE_OUT_JACK             = AUDIO_DEVICE_OUT | 0x00000004,
     AUDIO_DEVICE_OUT_BT_SCO           = AUDIO_DEVICE_OUT | 0x00000008,
-    AUDIO_DEVICE_OUT_HDMI             = AUDIO_DEVICE_OUT | 0x00000010,
     AUDIO_DEVICE_OUT_ALL              = (AUDIO_DEVICE_OUT_SPEAKER |
                                          AUDIO_DEVICE_OUT_RECEIVER |
                                          AUDIO_DEVICE_OUT_JACK |
-                                         AUDIO_DEVICE_OUT_BT_SCO |
-                                         AUDIO_DEVICE_OUT_HDMI),
+                                         AUDIO_DEVICE_OUT_BT_SCO),
     /* input devices */
     AUDIO_DEVICE_IN_MAIN_MIC          = AUDIO_DEVICE_IN | 0x00000001,
     AUDIO_DEVICE_IN_SUB_MIC           = AUDIO_DEVICE_IN | 0x00000002,
@@ -111,17 +130,14 @@ typedef struct device_type {
 /* Verbs */
 #define AUDIO_USE_CASE_VERB_INACTIVE                "Inactive"
 #define AUDIO_USE_CASE_VERB_HIFI                    "HiFi"
-#define AUDIO_USE_CASE_VERB_VOICECALL               "VoiceCall"
+#define AUDIO_USE_CASE_VERB_VOICECALL               "Voice"
 #define AUDIO_USE_CASE_VERB_LOOPBACK                "Loopback"
-#define AUDIO_USE_CASE_VERB_FMRADIO                 "FM_Radio"
+#define AUDIO_USE_CASE_VERB_VIDEOCALL               "Video"
 
 /* Modifiers */
 #define AUDIO_USE_CASE_MODIFIER_VOICESEARCH              "VoiceSearch"
 #define AUDIO_USE_CASE_MODIFIER_CAMCORDING               "Camcording"
 #define AUDIO_USE_CASE_MODIFIER_RINGTONE                 "Ringtone"
-#define AUDIO_USE_CASE_MODIFIER_DUAL_RINGTONE            "DualRingtone"
-#define AUDIO_USE_CASE_MODIFIER_MEDIA                    "Media"
-#define AUDIO_USE_CASE_MODIFIER_DUAL_MEDIA               "DualMedia"
 
 #define streq !strcmp
 #define strneq strcmp
@@ -194,8 +210,9 @@ typedef struct audio_hal_device {
     pthread_mutex_t pcm_lock;
     uint32_t pcm_count;
     audio_route_mode_t mode;
+    pthread_cond_t device_cond;
+    pthread_mutex_t device_lock;
 } audio_hal_device_t;
-
 
 /* Stream */
 #define AUDIO_VOLUME_LEVEL_MAX 16
@@ -276,32 +293,51 @@ typedef enum audio_sample_format {
     AUDIO_SAMPLE_INVALID = -1
 } audio_sample_format_t;
 
+typedef struct audio_hal_modem {
+
+    struct {
+        pthread_t voice_thread_handle;
+        pthread_t voip_thread_handle;
+        pthread_cond_t voice_thread_cond;
+        pthread_mutex_t voice_thread_lock;
+        snd_pcm_t *voice_pcm_handle_p;
+        snd_pcm_t *voice_pcm_handle_c;
+        int exit_vbc_thread;
+        int vbpipe_fd;
+        int vbpipe_voip_fd;
+        unsigned short vbpipe_count;
+    } vbc;
+
+    struct {
+        int fd;
+    } at_cmd;
+
+    audio_modem_t  *cp;
+    cp_type_t cp_type;
+
+    int samplerate;
+    int sim_id;
+    int is_connected;
+} audio_hal_modem_t;
+
 /* Overall */
 typedef struct audio_hal {
     audio_hal_device_t device;
     audio_hal_volume_t volume;
     audio_hal_ucm_t ucm;
     audio_hal_mixer_t mixer;
+    audio_hal_modem_t modem;
 } audio_hal_t;
-
-typedef struct {
-    unsigned short      is_open; /* if is_open is true, open device; else close device.*/
-    unsigned short      is_headphone;
-    unsigned int        is_downlink_mute;
-    unsigned int        is_uplink_mute;
-} device_ctrl_t;
-
-typedef struct samplerate_ctrl {
-    unsigned int samplerate; /* change samplerate.*/
-} set_samplerate_t;
 
 audio_return_t _audio_volume_init(audio_hal_t *ah);
 audio_return_t _audio_volume_deinit(audio_hal_t *ah);
-
 audio_return_t _audio_device_init(audio_hal_t *ah);
 audio_return_t _audio_device_deinit(audio_hal_t *ah);
 audio_return_t _audio_ucm_init(audio_hal_t *ah);
 audio_return_t _audio_ucm_deinit(audio_hal_t *ah);
+audio_return_t _audio_modem_init(audio_hal_t *ah);
+audio_return_t _audio_modem_deinit(audio_hal_t *ah);
+
 void _audio_ucm_get_device_name(audio_hal_t *ah, const char *use_case, audio_direction_t direction, const char **value);
 #define _audio_ucm_update_use_case _audio_ucm_set_use_case
 audio_return_t _audio_ucm_set_use_case(audio_hal_t *ah, const char *verb, const char *devices[], const char *modifiers[]);
@@ -310,6 +346,7 @@ audio_return_t _audio_ucm_set_modifiers(audio_hal_t *ah, const char *verb, const
 int _audio_ucm_fill_device_info_list(audio_hal_t *ah, audio_device_info_t *device_info_list, const char *verb);
 int _voice_pcm_open(audio_hal_t *ah);
 int _voice_pcm_close(audio_hal_t *ah, uint32_t direction);
+void _pcm_close_if_needed(audio_hal_t *ah);
 audio_return_t _audio_ucm_get_verb(audio_hal_t *ah, const char **value);
 audio_return_t _audio_ucm_reset_use_case(audio_hal_t *ah);
 audio_return_t _audio_util_init(audio_hal_t *ah);
