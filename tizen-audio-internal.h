@@ -141,8 +141,9 @@ typedef struct device_type {
 #define AUDIO_USE_CASE_VERB_INACTIVE                "Inactive"
 #define AUDIO_USE_CASE_VERB_HIFI                    "HiFi"
 #define AUDIO_USE_CASE_VERB_VOICECALL               "Voice"
-#define AUDIO_USE_CASE_VERB_LOOPBACK                "Loopback"
 #define AUDIO_USE_CASE_VERB_VIDEOCALL               "Video"
+#define AUDIO_USE_CASE_VERB_VOIP                    "VoIP"
+#define AUDIO_USE_CASE_VERB_LOOPBACK                "Loopback"
 
 /* Modifiers */
 #define AUDIO_USE_CASE_MODIFIER_VOICESEARCH              "VoiceSearch"
@@ -208,7 +209,8 @@ typedef struct audio_device_info {
 
 typedef enum audio_route_mode {
     VERB_NORMAL,
-    VERB_CALL,
+    VERB_VOICECALL,
+    VERB_VIDEOCALL,
     VERB_VOIP
 } audio_route_mode_t;
 
