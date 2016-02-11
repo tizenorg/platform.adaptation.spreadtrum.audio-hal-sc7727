@@ -780,8 +780,7 @@ static vbc_ctrl_pipe_para_t *__audio_modem_create(audio_modem_t  *modem, const c
 static void __audio_modem_start_tag(void *data, const XML_Char *tag_name,
         const XML_Char **attr)
 {
-    struct modem_config_parse_state *state = data;
-    audio_modem_t *modem = state->modem_info;
+    audio_modem_t *modem = (audio_modem_t *)data;
 
     /* Look at tags */
     if (strcmp(tag_name, "audio") == 0) {
@@ -794,12 +793,12 @@ static void __audio_modem_start_tag(void *data, const XML_Char *tag_name,
         /* Obtain the modem num */
         if (strcmp(attr[0], "num") == 0) {
             AUDIO_LOG_DEBUG("The modem num is '%s'", attr[1]);
-            state->vbc_ctrl_pipe_info = __audio_modem_create(modem, attr[1]);
+            __audio_modem_create(modem, attr[1]);
         } else {
             AUDIO_LOG_ERROR("no modem num!");
         }
     } else if (strcmp(tag_name, "cp") == 0) {
-        if (state->vbc_ctrl_pipe_info) {
+        if (modem->vbc_ctrl_pipe_info) {
             /* Obtain the modem name  \pipe\vbc   filed */
             if (strcmp(attr[0], "name") != 0) {
                 AUDIO_LOG_ERROR("Unnamed modem!");
@@ -816,15 +815,15 @@ static void __audio_modem_start_tag(void *data, const XML_Char *tag_name,
             AUDIO_LOG_DEBUG("cp name is '%s', pipe is '%s',vbc is '%s'", attr[1], attr[3],attr[5]);
             if(strcmp(attr[1], "w") == 0)
             {
-                state->vbc_ctrl_pipe_info->cp_type = CP_W;
+                modem->vbc_ctrl_pipe_info->cp_type = CP_W;
             }
             else if(strcmp(attr[1], "t") == 0)
             {
-                state->vbc_ctrl_pipe_info->cp_type = CP_TG;
+                modem->vbc_ctrl_pipe_info->cp_type = CP_TG;
             }
-            memcpy((void*)state->vbc_ctrl_pipe_info->s_vbc_ctrl_pipe_name,(void*)attr[3],strlen((char *)attr[3]));
-            state->vbc_ctrl_pipe_info->channel_id = atoi((char *)attr[5]);
-            state->vbc_ctrl_pipe_info++;
+            memcpy((void*)modem->vbc_ctrl_pipe_info->s_vbc_ctrl_pipe_name,(void*)attr[3],strlen((char *)attr[3]));
+            modem->vbc_ctrl_pipe_info->channel_id = atoi((char *)attr[5]);
+            modem->vbc_ctrl_pipe_info++;
 
         } else {
             AUDIO_LOG_ERROR("error profile!");
@@ -917,16 +916,8 @@ static void __audio_modem_end_tag(void *data, const XML_Char *tag_name)
     return;
 }
 
-struct config_parse_state {
-    audio_modem_t *modem_info;
- /* To do : pga control setting*/
- /* struct audio_pga *pga; */
- /* struct pga_profile *profile; */
- /* struct pga_attribute_item *attribute_item; */
-};
 static audio_modem_t * __audio_modem_parse (void)
 {
-    struct config_parse_state state;
     XML_Parser parser;
     FILE *file;
     int bytes_read;
@@ -954,9 +945,7 @@ static audio_modem_t * __audio_modem_parse (void)
         goto err_parser_create;
     }
 
-    memset(&state, 0, sizeof(state));
-    state.modem_info = modem;
-    XML_SetUserData(parser, &state);
+    XML_SetUserData(parser, modem);
     XML_SetElementHandler(parser, __audio_modem_start_tag, __audio_modem_end_tag);
 
     for (;;) {

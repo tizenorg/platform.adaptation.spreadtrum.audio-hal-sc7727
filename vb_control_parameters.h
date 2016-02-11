@@ -105,12 +105,6 @@ typedef struct{
 	int num;
 	audio_mode_item_t *audio_mode_item_info;
 }aud_mode_t;
-struct modem_config_parse_state{
-	audio_modem_t *modem_info;
-	vbc_ctrl_pipe_para_t *vbc_ctrl_pipe_info;
-	aud_mode_t  *audio_mode_info;
-	audio_mode_item_t *audio_mode_item_info;
-};
 
 #endif
 
