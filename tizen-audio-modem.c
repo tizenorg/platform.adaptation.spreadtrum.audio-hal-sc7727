@@ -182,34 +182,6 @@ int _audio_modem_is_call_connected(audio_hal_t *ah)
     return (val == VBC_TD_CHANNELID) ? 1 : 0;
 }
 
-static int __voice_read_samplerate(int fd, set_samplerate_t *paras_ptr)
-{
-    int ret = 0;
-    if (fd > 0 && paras_ptr != NULL) {
-    ret = __read_nonblock(fd, paras_ptr, sizeof(set_samplerate_t));
-        if (ret != sizeof(set_samplerate_t))
-            ret = -1;
-    }
-    AUDIO_LOG_INFO("Return value of read sample rate = %d", ret);
-    return ret;
-
-}
-
-static int __voice_get_samplerate(audio_hal_t *ah, int fd)
-{
-    set_samplerate_t samplerate_paras;
-
-    memset(&samplerate_paras, 0, sizeof(set_samplerate_t));
-    __voice_read_samplerate(fd, &samplerate_paras);
-
-    if (samplerate_paras.samplerate <= 0)
-        ah->modem.samplerate = 8000;
-    else
-        ah->modem.samplerate = samplerate_paras.samplerate;
-
-    return 0;
-}
-
 static int __vbc_write_response(int fd, unsigned int cmd, uint32_t paras_size)
 {
     int ret = 0;
@@ -502,16 +474,6 @@ again:
                 case VBC_CMD_SET_SAMPLERATE: {
                     AUDIO_LOG_INFO("[voice] Received VBC_CMD_SET_SAMPLERATE");
 
-//                    _voice_pcm_close(ah, 0);
-//
-//                    __voice_get_samplerate(ah, vbpipe_fd);
-//
-//                    ret = _voice_pcm_open(ah);
-//                    if (ret < 0) {
-//                        _voice_pcm_close(ah, 1);
-//                        break;
-//                    }
-
                     AUDIO_LOG_DEBUG("[voice] Send response for VBC_CMD_SET_SAMPLERATE");
                     __vbc_write_response(vbpipe_fd, VBC_CMD_SET_SAMPLERATE, 0);
                     break;
@@ -681,14 +643,6 @@ again:
                 case VBC_CMD_SET_SAMPLERATE: {
                     AUDIO_LOG_INFO("[voip] Received VBC_CMD_SET_SAMPLERATE");
 
-//                    _voice_pcm_close(ah, 0);
-//                    __voice_get_samplerate(ah, vbpipe_fd);
-//
-//                    ret = _voice_pcm_open(ah);
-//                    if (ret < 0) {
-//                        _voice_pcm_close(ah, 1);
-//                        break;
-//                    }
                     AUDIO_LOG_DEBUG("[voip] Send response for VBC_CMD_SET_SAMPLERATE");
                     __vbc_write_response(vbpipe_fd, VBC_CMD_SET_SAMPLERATE, 0);
                     break;
