@@ -26,7 +26,7 @@
 #define VOIP_PIPE_NAME_MAX     VBC_PIPE_NAME_MAX_LEN
 #define NAME_LEN_MAX 16
 
-#define AUDIO_XML_PATH "/usr/etc/audio_hw.xml"
+#define AUDIO_XML_PATH SYSCONFDIR"/multimedia/audio_hw.xml" /* SYSCONFDIR is defined at .spec */
 
 #define MODEM_T_ENABLE_PROPERTY     "persist.modem.t.enable"
 #define MODEM_W_ENABLE_PROPERTY     "persist.modem.w.enable"
