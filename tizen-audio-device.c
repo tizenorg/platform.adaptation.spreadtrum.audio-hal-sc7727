@@ -354,6 +354,8 @@ audio_return_t audio_do_route(void *audio_handle, audio_route_info_t *info)
     audio_hal_t *ah = (audio_hal_t *)audio_handle;
     device_info_t *devices = NULL;
     uint32_t prev_size;
+    int32_t i;
+    int32_t j;
 
     AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
     AUDIO_RETURN_VAL_IF_FAIL(info, AUDIO_ERR_PARAMETER);
@@ -376,12 +378,31 @@ audio_return_t audio_do_route(void *audio_handle, audio_route_info_t *info)
                     }
                 } else if (ah->device.num_of_call_devices) {
                     prev_size = ah->device.num_of_call_devices;
-                    ah->device.num_of_call_devices += info->num_of_devices;
-                    if ((ah->device.init_call_devices = (device_info_t*)realloc(ah->device.init_call_devices, sizeof(device_info_t)*ah->device.num_of_call_devices))) {
-                        memcpy((void*)&(ah->device.init_call_devices[prev_size]), devices, info->num_of_devices*sizeof(device_info_t));
+                    if (prev_size == 2) {
+                        /* There's a change to be requested to change routing from user
+                         * though two devices(for input/output) has already been set for call-voice routing.
+                         * In this case, exchange an old device for a new device if it's direction is same as an old one's. */
+                        for (i = 0; i < prev_size; i++) {
+                            for (j = 0; j < info->num_of_devices; j++) {
+                                if (devices[j].direction == ah->device.init_call_devices[i].direction &&
+                                    devices[j].id != ah->device.init_call_devices[i].id)
+                                    memcpy(&ah->device.init_call_devices[i], &devices[j], sizeof(device_info_t));
+                            }
+                        }
+                    } else if (prev_size < 2) {
+                        /* A device has already been added for call-voice routing,
+                         * and now it is about to add a new device(input or output device). */
+                        ah->device.num_of_call_devices += info->num_of_devices;
+                        if ((ah->device.init_call_devices = (device_info_t*)realloc(ah->device.init_call_devices, sizeof(device_info_t)*ah->device.num_of_call_devices))) {
+                            memcpy((void*)&(ah->device.init_call_devices[prev_size]), devices, info->num_of_devices*sizeof(device_info_t));
+                        } else {
+                            AUDIO_LOG_ERROR("failed to realloc");
+                            audio_ret = AUDIO_ERR_RESOURCE;
+                            goto ERROR;
+                        }
                     } else {
-                        AUDIO_LOG_ERROR("failed to realloc");
-                        audio_ret = AUDIO_ERR_RESOURCE;
+                        AUDIO_LOG_ERROR("invaild previous num. of call devices");
+                        audio_ret = AUDIO_ERR_INTERNAL;
                         goto ERROR;
                     }
                 }
@@ -389,7 +410,7 @@ audio_return_t audio_do_route(void *audio_handle, audio_route_info_t *info)
                 AUDIO_LOG_ERROR("failed to do route for call-voice, num_of_devices is 0");
                 audio_ret = AUDIO_ERR_PARAMETER;
                 goto ERROR;
-        }
+            }
             AUDIO_LOG_INFO("modem is not ready, skip...");
         } else {
             audio_ret = _do_route_voicecall(ah, devices, info->num_of_devices);
