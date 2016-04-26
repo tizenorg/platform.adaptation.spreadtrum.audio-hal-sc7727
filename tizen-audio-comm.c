@@ -26,10 +26,42 @@ audio_return_t _audio_comm_send_message(audio_hal_t *ah, const char *name, int v
 {
     audio_return_t audio_ret = AUDIO_RET_OK;
 
+    AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
+    AUDIO_RETURN_VAL_IF_FAIL(name, AUDIO_ERR_PARAMETER);
+
     AUDIO_LOG_DEBUG("send message : name(%s), value(%d)", name, value);
     if (ah->comm.msg_cb) {
         ah->comm.msg_cb(name, value, ah->comm.user_data);
     }
+
+    return audio_ret;
+}
+
+audio_return_t _audio_comm_set_message_callback(audio_hal_t *ah, message_cb callback, void *user_data)
+{
+    audio_return_t audio_ret = AUDIO_RET_OK;
+
+    AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
+    AUDIO_RETURN_VAL_IF_FAIL(callback, AUDIO_ERR_PARAMETER);
+
+    ah->comm.msg_cb = callback;
+    ah->comm.user_data = user_data;
+
+    AUDIO_LOG_DEBUG("message callback is set, callback(%p), user_data(%p)", ah->comm.msg_cb, ah->comm.user_data);
+
+    return audio_ret;
+}
+
+audio_return_t _audio_comm_unset_message_callback(audio_hal_t *ah)
+{
+    audio_return_t audio_ret = AUDIO_RET_OK;
+
+    AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
+
+    ah->comm.msg_cb = NULL;
+    ah->comm.user_data = NULL;
+
+    AUDIO_LOG_DEBUG("message callback is unset");
 
     return audio_ret;
 }
@@ -40,6 +72,9 @@ audio_return_t _audio_comm_init(audio_hal_t *ah)
 
     AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
 
+    ah->comm.msg_cb = NULL;
+    ah->comm.user_data = NULL;
+
     return audio_ret;
 }
 
@@ -48,6 +83,9 @@ audio_return_t _audio_comm_deinit(audio_hal_t *ah)
     audio_return_t audio_ret = AUDIO_RET_OK;
 
     AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
+
+    ah->comm.msg_cb = NULL;
+    ah->comm.user_data = NULL;
 
     return audio_ret;
 }
