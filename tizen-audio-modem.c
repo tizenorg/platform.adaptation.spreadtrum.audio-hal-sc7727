@@ -354,7 +354,7 @@ again:
                     AUDIO_LOG_INFO("[voice] Received VBC_CMD_PCM_OPEN");
 
                     ah->modem.is_connected = 1;
-                    audio_ret = _audio_do_route_voicecall(ah, ah->device.init_call_devices, ah->device.num_of_call_devices);
+                    audio_ret = _audio_update_route_voicecall(ah, ah->device.init_call_devices, ah->device.num_of_call_devices);
                     if (AUDIO_IS_ERROR(audio_ret)) {
                         AUDIO_LOG_WARN("set voicecall route return 0x%x", audio_ret);
                         if (audio_ret == AUDIO_ERR_INVALID_STATE) {
