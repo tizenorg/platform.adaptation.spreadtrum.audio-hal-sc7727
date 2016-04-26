@@ -360,7 +360,7 @@ audio_return_t _audio_comm_deinit(audio_hal_t *ah);
 audio_return_t _audio_util_init(audio_hal_t *ah);
 audio_return_t _audio_util_deinit(audio_hal_t *ah);
 
-audio_return_t _audio_do_route_voicecall(audio_hal_t *ah, device_info_t *devices, int32_t num_of_devices);
+audio_return_t _audio_update_route_voicecall(audio_hal_t *ah, device_info_t *devices, int32_t num_of_devices);
 void _audio_ucm_get_device_name(audio_hal_t *ah, const char *use_case, audio_direction_t direction, const char **value);
 #define _audio_ucm_update_use_case _audio_ucm_set_use_case
 audio_return_t _audio_ucm_set_use_case(audio_hal_t *ah, const char *verb, const char *devices[], const char *modifiers[]);
@@ -371,6 +371,8 @@ audio_return_t _audio_ucm_get_verb(audio_hal_t *ah, const char **value);
 audio_return_t _audio_ucm_reset_use_case(audio_hal_t *ah);
 int _audio_modem_is_call_connected(audio_hal_t *ah);
 audio_return_t _audio_comm_send_message(audio_hal_t *ah, const char *name, int value);
+audio_return_t _audio_comm_set_message_callback(audio_hal_t *ah, message_cb callback, void *user_data);
+audio_return_t _audio_comm_unset_message_callback(audio_hal_t *ah);
 audio_return_t _audio_mixer_control_set_param(audio_hal_t *ah, const char* ctl_name, snd_ctl_elem_value_t* value, int size);
 audio_return_t _audio_mixer_control_set_value(audio_hal_t *ah, const char *ctl_name, int val);
 audio_return_t _audio_mixer_control_set_value_string(audio_hal_t *ah, const char* ctl_name, const char* value);
