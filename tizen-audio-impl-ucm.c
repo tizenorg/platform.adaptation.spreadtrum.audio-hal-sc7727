@@ -41,7 +41,7 @@
 #define UCM_PREFIX_REQUESTED "> UCM requested"
 #define UCM_PREFIX_CHANGED   "<<< UCM changed"
 
-audio_return_t _audio_ucm_init(audio_hal_t *ah)
+audio_return_t _ucm_init(audio_hal_t *ah)
 {
     AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
 
@@ -54,18 +54,20 @@ audio_return_t _audio_ucm_init(audio_hal_t *ah)
     return AUDIO_RET_OK;
 }
 
-audio_return_t _audio_ucm_deinit(audio_hal_t *ah)
+audio_return_t _ucm_deinit(audio_hal_t *ah)
 {
     AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
     AUDIO_RETURN_VAL_IF_FAIL(ah->ucm.uc_mgr, AUDIO_ERR_PARAMETER);
 
-    snd_use_case_mgr_close(ah->ucm.uc_mgr);
-    ah->ucm.uc_mgr = NULL;
+    if (ah->ucm.uc_mgr) {
+        snd_use_case_mgr_close(ah->ucm.uc_mgr);
+        ah->ucm.uc_mgr = NULL;
+    }
 
     return AUDIO_RET_OK;
 }
 
-void _audio_ucm_get_device_name(audio_hal_t *ah, const char *use_case, audio_direction_t direction, const char **value)
+void _ucm_get_device_name(audio_hal_t *ah, const char *use_case, audio_direction_t direction, const char **value)
 {
     char identifier[70] = { 0, };
 
@@ -89,7 +91,7 @@ static inline void __add_ucm_device_info(audio_hal_t *ah, const char *use_case, 
     AUDIO_RETURN_IF_FAIL(device_info_list);
     AUDIO_RETURN_IF_FAIL(device_info_count);
 
-    _audio_ucm_get_device_name(ah, use_case, direction, &device_name);
+    _ucm_get_device_name(ah, use_case, direction, &device_name);
     if (device_name) {
         device_info = &device_info_list[(*device_info_count)++];
 
@@ -108,7 +110,7 @@ static inline void __add_ucm_device_info(audio_hal_t *ah, const char *use_case, 
     }
 }
 
-int _audio_ucm_fill_device_info_list(audio_hal_t *ah, audio_device_info_t *device_info_list, const char *verb)
+int _ucm_fill_device_info_list(audio_hal_t *ah, audio_device_info_t *device_info_list, const char *verb)
 {
     int device_info_count = 0;
     const char *curr_verb = NULL;
@@ -211,7 +213,7 @@ static inline int __set_use_case_with_time(snd_use_case_mgr_t *uc_mgr, const cha
    2) If verb is changed
       -> Reset, set new verb, enable devices & modifiers
  */
-audio_return_t _audio_ucm_set_use_case(audio_hal_t *ah, const char *verb, const char *devices[], const char *modifiers[])
+audio_return_t _ucm_set_use_case(audio_hal_t *ah, const char *verb, const char *devices[], const char *modifiers[])
 {
     audio_return_t audio_ret = AUDIO_RET_OK;
     int is_verb_changed = 0, is_dev_changed = 0, is_mod_changed = 0;
@@ -425,7 +427,7 @@ exit:
     return audio_ret;
 }
 
-audio_return_t _audio_ucm_set_devices(audio_hal_t *ah, const char *verb, const char *devices[])
+audio_return_t _ucm_set_devices(audio_hal_t *ah, const char *verb, const char *devices[])
 {
     audio_return_t audio_ret = AUDIO_RET_OK;
     int is_verb_changed = 0, is_dev_changed = 0;
@@ -560,7 +562,7 @@ exit:
 
 }
 
-audio_return_t _audio_ucm_set_modifiers(audio_hal_t *ah, const char *verb, const char *modifiers[])
+audio_return_t _ucm_set_modifiers(audio_hal_t *ah, const char *verb, const char *modifiers[])
 {
     audio_return_t audio_ret = AUDIO_RET_OK;
     int is_verb_changed = 0, is_mod_changed = 0;
@@ -693,7 +695,7 @@ exit:
     return audio_ret;
 }
 
-audio_return_t _audio_ucm_get_verb(audio_hal_t *ah, const char **value)
+audio_return_t _ucm_get_verb(audio_hal_t *ah, const char **value)
 {
     audio_return_t ret = AUDIO_RET_OK;
 
@@ -709,8 +711,7 @@ audio_return_t _audio_ucm_get_verb(audio_hal_t *ah, const char **value)
     return ret;
 }
 
-
-audio_return_t _audio_ucm_reset_use_case(audio_hal_t *ah)
+audio_return_t _ucm_reset_use_case(audio_hal_t *ah)
 {
     audio_return_t ret = AUDIO_RET_OK;
 
@@ -726,4 +727,3 @@ audio_return_t _audio_ucm_reset_use_case(audio_hal_t *ah)
 
     return ret;
 }
-

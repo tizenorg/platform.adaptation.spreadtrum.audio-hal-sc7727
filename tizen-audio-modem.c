@@ -1,7 +1,7 @@
 /*
  * audio-hal
  *
- * Copyright (c) 2000 - 2013 Samsung Electronics Co., Ltd. All rights reserved.
+ * Copyright (c) 2014 - 2016 Samsung Electronics Co., Ltd. All rights reserved.
  *
  * Contact:
  *
@@ -31,6 +31,7 @@
 #include <vconf.h>
 
 #include "tizen-audio-internal.h"
+ #include "tizen-audio-impl.h"
 
 #define vbc_thread_new pthread_create
 #define MIXER_VBC_SWITCH                            "VBC Switch"
@@ -176,7 +177,7 @@ int _audio_modem_is_call_connected(audio_hal_t *ah)
 {
     int val = -1; /* Mixer values 0 - cp [3g] ,1 - cp [2g] ,2 - ap */
 
-    _audio_mixer_control_get_value(ah, MIXER_VBC_SWITCH, &val);
+    _mixer_control_get_value(ah, MIXER_VBC_SWITCH, &val);
     AUDIO_LOG_INFO("modem is connected for call = %d", (val == VBC_TD_CHANNELID));
 
     return (val == VBC_TD_CHANNELID) ? 1 : 0;
@@ -216,7 +217,7 @@ static void i2s_pin_mux_sel(audio_hal_t *ah, int type)
     modem = ah->modem.cp;
 
     if (type == FM_IIS) {
-        _audio_mixer_control_set_value(ah,
+        _mixer_control_set_value(ah,
                     PIN_SWITCH_IIS0_SYS_SEL, PIN_SWITCH_IIS0_VBC_ID);
         return;
     }
@@ -224,21 +225,21 @@ static void i2s_pin_mux_sel(audio_hal_t *ah, int type)
        if(ah->device.active_out & AUDIO_DEVICE_OUT_BT_SCO) {
             if(modem->i2s_bt.is_ext) {
                 if(modem->i2s_bt.is_switch) {
-                    ret = _audio_mixer_control_set_value(ah,
+                    ret = _mixer_control_set_value(ah,
                             PIN_SWITCH_IIS0_SYS_SEL, PIN_SWITCH_IIS0_CP0_ID);
                 }
             } else {
                 if(modem->i2s_bt.is_switch) {
                     int value = 0;
-                    _audio_mixer_control_get_value (ah, PIN_SWITCH_IIS0_SYS_SEL, &value);
+                    _mixer_control_get_value (ah, PIN_SWITCH_IIS0_SYS_SEL, &value);
                     if(value == PIN_SWITCH_IIS0_CP0_ID) {
-                        ret = _audio_mixer_control_set_value(ah,
+                        ret = _mixer_control_set_value(ah,
                                 PIN_SWITCH_IIS0_SYS_SEL, PIN_SWITCH_IIS0_AP_ID);
                     }
                 }
                 if(ah->device.active_out & AUDIO_DEVICE_OUT_BT_SCO) {
                     if(modem->i2s_bt.is_switch) {
-                        ret = _audio_mixer_control_set_value(ah,
+                        ret = _mixer_control_set_value(ah,
                                 PIN_SWITCH_BT_IIS_SYS_SEL, PIN_SWITCH_BT_IIS_CP0_IIS0_ID);
                     }
                 }
@@ -248,21 +249,21 @@ static void i2s_pin_mux_sel(audio_hal_t *ah, int type)
         if(ah->device.active_out & AUDIO_DEVICE_OUT_BT_SCO) {
             if(modem->i2s_bt.is_ext) {
                 if(modem->i2s_bt.is_switch) {
-                    ret = _audio_mixer_control_set_value(ah,
+                    ret = _mixer_control_set_value(ah,
                             PIN_SWITCH_IIS0_SYS_SEL, PIN_SWITCH_IIS0_CP1_ID);
                 }
             } else {
                 if(modem->i2s_bt.is_switch) {
                     int value = 0;
-                    _audio_mixer_control_get_value (ah, PIN_SWITCH_IIS0_SYS_SEL, &value);
+                    _mixer_control_get_value (ah, PIN_SWITCH_IIS0_SYS_SEL, &value);
                     if(value == PIN_SWITCH_IIS0_CP1_ID) {
-                        ret = _audio_mixer_control_set_value(ah,
+                        ret = _mixer_control_set_value(ah,
                                 PIN_SWITCH_IIS0_SYS_SEL, PIN_SWITCH_IIS0_CP2_ID);
                     }
                 }
                 if(ah->device.active_out & AUDIO_DEVICE_OUT_BT_SCO) {
                     if(modem->i2s_bt.is_switch) {
-                        ret = _audio_mixer_control_set_value(ah,
+                        ret = _mixer_control_set_value(ah,
                                 PIN_SWITCH_BT_IIS_SYS_SEL, PIN_SWITCH_BT_IIS_CP1_IIS0_ID);
                     }
                 }
@@ -354,8 +355,7 @@ again:
                     AUDIO_LOG_INFO("[voice] Received VBC_CMD_PCM_OPEN");
 
                     ah->modem.is_connected = 1;
-                    audio_ret = _audio_update_route_voicecall(ah, ah->device.init_call_devices, ah->device.num_of_call_devices);
-                    if (AUDIO_IS_ERROR(audio_ret)) {
+                    if ((audio_ret = _audio_update_route_voicecall(ah, ah->device.init_call_devices, ah->device.num_of_call_devices))) {
                         AUDIO_LOG_WARN("set voicecall route return 0x%x", audio_ret);
                         if (audio_ret == AUDIO_ERR_INVALID_STATE) {
                             /* send signal and wait for the ucm setting,
@@ -396,7 +396,7 @@ again:
                     COND_TIMEDWAIT(ah->device.device_cond, ah->device.device_lock, "device_cond", TIMEOUT_SEC);
                     MUTEX_UNLOCK(ah->device.device_lock, "device_lock");
 
-                    _audio_mixer_control_set_value(ah, MIXER_VBC_SWITCH, VBC_ARM_CHANNELID);
+                    _mixer_control_set_value(ah, MIXER_VBC_SWITCH, VBC_ARM_CHANNELID);
 
                     AUDIO_LOG_DEBUG("[voice] Send response for VBC_CMD_PCM_CLOSE");
                     __vbc_write_response(vbpipe_fd, VBC_CMD_PCM_CLOSE, 0);
@@ -448,7 +448,7 @@ again:
                     else
                         AUDIO_LOG_INFO("is_switch:%d", switch_ctrl_params.is_switch);
 
-                    _audio_mixer_control_set_value(ah, MIXER_VBC_SWITCH, VBC_TD_CHANNELID);
+                    _mixer_control_set_value(ah, MIXER_VBC_SWITCH, VBC_TD_CHANNELID);
 
                     AUDIO_LOG_DEBUG("[voice] Send response for VBC_CMD_SET_GAIN");
                     __vbc_write_response(vbpipe_fd, VBC_CMD_SWITCH_CTRL, 0);
@@ -624,7 +624,7 @@ again:
                     else
                         AUDIO_LOG_INFO("is_switch:%d", switch_ctrl_params.is_switch);
 
-                    _audio_mixer_control_set_value(ah, MIXER_VBC_SWITCH, VBC_TD_CHANNELID);
+                    _mixer_control_set_value(ah, MIXER_VBC_SWITCH, VBC_TD_CHANNELID);
 
                     AUDIO_LOG_DEBUG("[voip] Send response for VBC_CMD_SWITCH_CTRL");
                     __vbc_write_response(vbpipe_fd, VBC_CMD_SWITCH_CTRL, 0);
@@ -940,8 +940,7 @@ audio_return_t _audio_modem_init(audio_hal_t *ah)
     ah->modem.vbc.vbpipe_count = 0;
 
     /* Initialize vbc interface */
-    audio_ret = __vbc_control_open(ah);
-    if (AUDIO_IS_ERROR(audio_ret)) {
+    if ((audio_ret = __vbc_control_open(ah))) {
         AUDIO_LOG_ERROR("__vbc_control_open failed");
         goto exit;
     }
@@ -956,7 +955,7 @@ audio_return_t _audio_modem_init(audio_hal_t *ah)
     ah->modem.cp_type = ah->modem.cp->vbc_ctrl_pipe_info->cp_type;
 
     /* This ctrl need to be set "0" always - SPRD */
-    _audio_mixer_control_set_value(ah, PIN_SWITCH_BT_IIS_CON_SWITCH, 0);
+    _mixer_control_set_value(ah, PIN_SWITCH_BT_IIS_CON_SWITCH, 0);
 
 exit:
     return audio_ret;
