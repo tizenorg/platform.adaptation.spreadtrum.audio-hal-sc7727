@@ -21,9 +21,10 @@
  */
 
 /* PCM */
-int _voice_pcm_open(audio_hal_t *ah);
-int _voice_pcm_close(audio_hal_t *ah, uint32_t direction);
-void _reset_pcm_devices(audio_hal_t *ah);
+audio_return_t _fmradio_pcm_open(audio_hal_t *ah);
+audio_return_t _fmradio_pcm_close(audio_hal_t *ah);
+audio_return_t _voice_pcm_open(audio_hal_t *ah);
+audio_return_t _voice_pcm_close(audio_hal_t *ah, uint32_t direction);
 audio_return_t _pcm_open(void **pcm_handle, uint32_t direction, void *sample_spec, uint32_t period_size, uint32_t periods);
 audio_return_t _pcm_start(void *pcm_handle);
 audio_return_t _pcm_stop(void *pcm_handle);
@@ -39,6 +40,23 @@ audio_return_t _pcm_set_sw_params(snd_pcm_t *pcm, snd_pcm_uframes_t avail_min, u
 audio_return_t _pcm_set_hw_params(snd_pcm_t *pcm, audio_pcm_sample_spec_t *sample_spec, uint8_t *use_mmap, snd_pcm_uframes_t *period_size, snd_pcm_uframes_t *buffer_size);
 
 /* Control */
+#define VBC_TD_CHANNELID                     0  /*  cp [3g] */
+#define VBC_ARM_CHANNELID                    2  /*  ap */
+#define MIXER_VBC_SWITCH                     "VBC Switch"
+#define PIN_SWITCH_IIS0_SYS_SEL              "IIS0 pin select"
+#define PIN_SWITCH_IIS0_AP_ID                0
+#define PIN_SWITCH_IIS0_CP0_ID               1
+#define PIN_SWITCH_IIS0_CP1_ID               2
+#define PIN_SWITCH_IIS0_CP2_ID               3
+#define PIN_SWITCH_IIS0_VBC_ID               4
+#define PIN_SWITCH_BT_IIS_SYS_SEL            "BT IIS pin select"
+#define PIN_SWITCH_BT_IIS_CP0_IIS0_ID        0
+#define PIN_SWITCH_BT_IIS_CP1_IIS0_ID        4
+#define PIN_SWITCH_BT_IIS_AP_IIS0_ID         8
+#define PIN_SWITCH_BT_IIS_CON_SWITCH         "BT IIS con switch"
+#define MIXER_FMRADIO_L_VOLUME               "VBC STR DG Set"
+#define MIXER_FMRADIO_R_VOLUME               "VBC STL DG Set"
+#define MIXER_FMRADIO_MUTE                   "Digital FM Function"
 audio_return_t _control_init(audio_hal_t *ah);
 audio_return_t _control_deinit(audio_hal_t *ah);
 audio_return_t _mixer_control_set_param(audio_hal_t *ah, const char* ctl_name, snd_ctl_elem_value_t* value, int size);

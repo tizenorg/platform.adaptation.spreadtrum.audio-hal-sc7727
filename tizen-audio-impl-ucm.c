@@ -135,6 +135,8 @@ audio_return_t _ucm_get_device_name(audio_hal_t *ah, const char *use_case, audio
 
     snd_use_case_get(ah->ucm.uc_mgr, identifier, value);
 
+    AUDIO_LOG_INFO("get device name : [%s]", *value);
+
     return AUDIO_RET_OK;
 }
 

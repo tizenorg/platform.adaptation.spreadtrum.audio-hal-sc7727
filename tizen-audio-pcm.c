@@ -30,6 +30,7 @@ audio_return_t _audio_pcm_init(audio_hal_t *ah)
 
     ah->device.pcm_in = NULL;
     ah->device.pcm_out = NULL;
+    ah->device.fmradio_pcm_out = NULL;
     pthread_mutex_init(&ah->device.pcm_lock, NULL);
     pthread_mutex_init(&ah->device.device_lock, NULL);
     pthread_cond_init(&ah->device.device_cond, NULL);
