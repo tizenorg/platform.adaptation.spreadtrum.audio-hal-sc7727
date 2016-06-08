@@ -29,11 +29,17 @@
 #include <iniparser.h>
 
 #include "tizen-audio-internal.h"
+#include "tizen-audio-impl.h"
 
 #define VOLUME_INI_DEFAULT_PATH     SYSCONFDIR"/multimedia/mmfw_audio_volume.ini" /* SYSCONFDIR is defined at .spec */
 #define VOLUME_INI_TEMP_PATH        "/opt/system/mmfw_audio_volume.ini"
 #define VOLUME_VALUE_MAX            (1.0f)
 #define GAIN_VALUE_MAX              (1.0f)
+#define RADIO_TUNING_DEFUALT_FILE   SYSCONFDIR"/multimedia/mmfw_fmradio.ini"
+#define RADIO_TUNING_TEMP_FILE      "/opt/system/.mmfw_fmradio.ini"
+#define RADIO_TUNING_ENABLE         "tuning:enable"
+#define RADIO_TUNING_VOLUME_LEVELS  "fmradio:volume_levels"
+#define RADIO_TUNING_VOLUME_TABLE   "fmradio:volume_table"
 
 static const char *g_volume_vconf[AUDIO_VOLUME_TYPE_MAX] = {
     "file/private/sound/volume/system",         /* AUDIO_VOLUME_TYPE_SYSTEM */
@@ -252,12 +258,139 @@ static audio_return_t __load_volume_value_table_from_ini(audio_hal_t *ah)
     return AUDIO_RET_OK;
 }
 
+static audio_return_t __load_radio_volume_table(int** volume_table, int *number_of_elements)
+{
+    dictionary * dict = NULL;
+    const char delimiter[] = ", ";
+    char* ptr = NULL;
+    char* token = NULL;
+    char* list_str = NULL;
+    int* temp_table = NULL;
+    int index = 0;
+    int ret = 0;
+
+    bool tuning_enable = 0;
+    int not_found = -1;
+    int value = 0;
+
+    dict = iniparser_load(RADIO_TUNING_DEFUALT_FILE);
+    if (dict == NULL) {
+        AUDIO_LOG_ERROR("%s load failed", RADIO_TUNING_DEFUALT_FILE);
+        return AUDIO_ERR_UNDEFINED;
+    } else {
+        /*tuning enable */
+        value = iniparser_getboolean(dict, RADIO_TUNING_ENABLE, not_found);
+        if (value == not_found) {
+            AUDIO_LOG_ERROR("Can't get Tuning Enable value");
+        } else {
+            tuning_enable = value;
+            AUDIO_LOG_INFO("Tuning enabled.");
+        }
+        iniparser_freedict(dict); /*Cleanup*/
+    }
+
+    if (tuning_enable) {
+        AUDIO_LOG_INFO("Tuning enabled. load temp tuning file.");
+        dict = iniparser_load(RADIO_TUNING_TEMP_FILE);
+        if (!dict) {
+            AUDIO_LOG_WARN("%s load failed. Tuning enabled but there is not tuning temp file.  Use temporary file", RADIO_TUNING_TEMP_FILE);
+            dict = iniparser_load(RADIO_TUNING_DEFUALT_FILE);
+            if (!dict) {
+                AUDIO_LOG_ERROR("%s load failed", RADIO_TUNING_DEFUALT_FILE);
+                return AUDIO_ERR_UNDEFINED;
+            }
+        }
+    } else {
+        AUDIO_LOG_INFO("Tuning diabled. load default tuning file.");
+        dict = iniparser_load(RADIO_TUNING_DEFUALT_FILE);
+        if (!dict) {
+            AUDIO_LOG_ERROR("%s load failed", RADIO_TUNING_DEFUALT_FILE);
+            return AUDIO_ERR_UNDEFINED;
+        }
+    }
+
+    *number_of_elements = iniparser_getint(dict, RADIO_TUNING_VOLUME_LEVELS, -1);
+    if (*number_of_elements == -1) {
+        ret = AUDIO_ERR_INTERNAL;
+        goto error;
+    }
+        temp_table = (int *)malloc ((*number_of_elements) * sizeof(int));
+    if (!temp_table) {
+        goto error;
+    }
+    *volume_table = temp_table;
+
+    list_str = iniparser_getstring(dict, RADIO_TUNING_VOLUME_TABLE, NULL);
+    if (list_str) {
+        token = strtok_r(list_str, delimiter, &ptr);
+        while (token) {
+            temp_table[index] = atoi(token);
+            AUDIO_LOG_INFO("fm volume index %d is %d", index, temp_table[index]);
+            index++;
+            token = strtok_r(NULL, delimiter, &ptr);
+        }
+    }
+error:
+    iniparser_freedict(dict);
+    return ret;
+}
+
+audio_return_t _audio_volume_set_level_radio(audio_hal_t *ah, uint32_t level)
+{
+    audio_return_t audio_ret = AUDIO_RET_OK;
+
+    int volume = 0;
+    int mute = -1;
+
+    /* Applying mute at volume zero */
+    if (level == 0) {
+        if ((audio_ret = _mixer_control_set_value(ah, MIXER_FMRADIO_MUTE, 0)))
+            AUDIO_LOG_ERROR("set mixer(%s) failed", MIXER_FMRADIO_MUTE);
+
+    } else {
+        if ((audio_ret = _mixer_control_get_value(ah, MIXER_FMRADIO_MUTE, &mute))) {
+            AUDIO_LOG_ERROR("get mixer(%s) failed", MIXER_FMRADIO_MUTE);
+            return audio_ret;
+        }
+        if (mute == 0) {
+            if ((audio_ret = _mixer_control_set_value(ah, MIXER_FMRADIO_MUTE, 1))) {
+                AUDIO_LOG_ERROR("set mixer(%s) failed", MIXER_FMRADIO_MUTE);
+                return audio_ret;
+            }
+        }
+    }
+
+    if ((_mixer_control_get_value(ah, MIXER_FMRADIO_L_VOLUME, &volume)))
+        AUDIO_LOG_ERROR("get mixer(%s) failed", MIXER_FMRADIO_L_VOLUME);
+    else {
+        if (volume != ah->volume.radio_volume_value_table[level]) {
+            if ((audio_ret = _mixer_control_set_value(ah, MIXER_FMRADIO_L_VOLUME, ah->volume.radio_volume_value_table[level]))) {
+                AUDIO_LOG_ERROR("set mixer(%s) failed", MIXER_FMRADIO_L_VOLUME);
+                return audio_ret;
+            }
+        }
+    }
+
+    if ((_mixer_control_get_value(ah, MIXER_FMRADIO_R_VOLUME, &volume)))
+        AUDIO_LOG_ERROR("get mixer(%s) failed", MIXER_FMRADIO_R_VOLUME);
+    else {
+        if (volume != ah->volume.radio_volume_value_table[level]) {
+            if ((audio_ret = _mixer_control_set_value(ah, MIXER_FMRADIO_R_VOLUME, ah->volume.radio_volume_value_table[level])))
+                AUDIO_LOG_ERROR("set mixer(%s) failed", MIXER_FMRADIO_R_VOLUME);
+        }
+    }
+
+    return audio_ret;
+}
+
 audio_return_t _audio_volume_init(audio_hal_t *ah)
 {
     int i;
     int val = 0;
     audio_return_t audio_ret = AUDIO_RET_OK;
     int init_value[AUDIO_VOLUME_TYPE_MAX] = { 9, 11, 7, 11, 7, 4, 4, 7 };
+    int* fm_table = NULL;
+    int number_of_steps = 0;
 
     AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
 
@@ -285,6 +418,18 @@ audio_return_t _audio_volume_init(audio_hal_t *ah)
     if (audio_ret != AUDIO_RET_OK) {
         AUDIO_LOG_ERROR("gain table load error");
         return AUDIO_ERR_UNDEFINED;
+    }
+
+    /* radio volume table */
+    __load_radio_volume_table(&fm_table, &number_of_steps);
+    if (fm_table) {
+        AUDIO_LOG_DEBUG("number of steps -> %d", number_of_steps);
+        /*copy from temp structure to main strcture*/
+        for (i = 0; i < number_of_steps; i++) {
+            ah->volume.radio_volume_value_table[i] = fm_table[i];
+        }
+        free(fm_table);
+        fm_table = NULL;
     }
 
     return audio_ret;
@@ -366,6 +511,8 @@ audio_return_t audio_set_volume_level(void *audio_handle, audio_volume_info_t *i
     AUDIO_LOG_INFO("set [%s] volume_level: %d, direction(%d)", info->type, level, info->direction);
 
     /* set mixer related to H/W volume if needed */
+    if ((__get_volume_idx_by_string_type(info->type) == AUDIO_VOLUME_TYPE_MEDIA) && ah->device.is_radio_on)
+        audio_ret = _audio_volume_set_level_radio(ah, level);
 
     return audio_ret;
 }

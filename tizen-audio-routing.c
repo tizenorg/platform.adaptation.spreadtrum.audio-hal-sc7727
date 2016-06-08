@@ -52,6 +52,7 @@ static const char* mode_to_verb_str[] = {
     AUDIO_USE_CASE_VERB_VOICECALL,
     AUDIO_USE_CASE_VERB_VIDEOCALL,
     AUDIO_USE_CASE_VERB_VOIP,
+    AUDIO_USE_CASE_VERB_FMRADIO,
 };
 
 static uint32_t __convert_device_string_to_enum(const char* device_str, uint32_t direction)
@@ -162,32 +163,50 @@ static audio_return_t __set_devices(audio_hal_t *ah, const char *verb, device_in
     return audio_ret;
 }
 
+static audio_return_t __connect_fm_radio(audio_hal_t *ah)
+{
+    audio_return_t audio_ret = AUDIO_RET_OK;
+
+    AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
+
+    audio_ret = _mixer_control_set_value(ah,
+                    PIN_SWITCH_IIS0_SYS_SEL, PIN_SWITCH_IIS0_VBC_ID);
+    return audio_ret;
+}
+
 static audio_return_t __update_route_ap_playback_capture(audio_hal_t *ah, audio_route_info_t *route_info)
 {
     audio_return_t audio_ret = AUDIO_RET_OK;
     device_info_t *devices = NULL;
     const char *verb = mode_to_verb_str[VERB_NORMAL];
-#if 0  /* Disable setting modifiers, because driver does not support it yet */
-    int mod_idx = 0;
-    const char *modifiers[MAX_MODIFIERS] = {NULL,};
-#endif
+
+    AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
+    AUDIO_RETURN_VAL_IF_FAIL(route_info, AUDIO_ERR_PARAMETER);
 
     if (ah->modem.is_connected) {
-        AUDIO_LOG_INFO("modem is connected, skip verb[%s]", verb);
+        AUDIO_LOG_WARN("modem is connected, skip verb[%s]", verb);
         return audio_ret;
     }
 
     if (ah->device.mode != VERB_NORMAL) {
-        if (ah->device.mode == VERB_VOICECALL) {
-            __reset_voice_devices_info(ah);
-            COND_SIGNAL(ah->device.device_cond, "device_cond");
+        if (ah->device.mode == VERB_RADIO) {
+            if (ah->device.is_radio_on && !ah->modem.is_connected) {
+                /* Skip setting NORMAL VERB and keep going with RADIO VERB */
+                AUDIO_LOG_WARN("radio is in progress, skip verb[%s]", verb);
+                verb = mode_to_verb_str[VERB_RADIO];
+            } else if (!ah->device.is_radio_on) {
+                if ((audio_ret = _fmradio_pcm_close(ah)))
+                    AUDIO_LOG_ERROR("failed to _fmradio_pcm_close(), ret(0x%x)", audio_ret);
+            }
+        } else {
+            if (ah->device.mode == VERB_VOICECALL) {
+                __reset_voice_devices_info(ah);
+                COND_SIGNAL(ah->device.device_cond, "device_cond");
+            }
+            _reset_pcm_devices(ah);
+            ah->device.mode = VERB_NORMAL;
         }
-        _reset_pcm_devices(ah);
-        ah->device.mode = VERB_NORMAL;
     }
-
-    AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
-    AUDIO_RETURN_VAL_IF_FAIL(route_info, AUDIO_ERR_PARAMETER);
 
     devices = route_info->device_infos;
 
@@ -198,28 +217,7 @@ static audio_return_t __update_route_ap_playback_capture(audio_hal_t *ah, audio_
         AUDIO_LOG_ERROR("Failed to set devices: error = 0x%x", audio_ret);
         return audio_ret;
     }
-    ah->device.mode = VERB_NORMAL;
 
-#if 0 /* Disable setting modifiers, because driver does not support it yet */
-    /* Set modifiers */
-    if (!strncmp("voice_recognition", route_info->role, MAX_NAME_LEN)) {
-        modifiers[mod_idx++] = AUDIO_USE_CASE_MODIFIER_VOICESEARCH;
-    } else if ((!strncmp("alarm", route_info->role, MAX_NAME_LEN))||(!strncmp("notifiication", route_info->role, MAX_NAME_LEN))) {
-        if (ah->device.active_out &= AUDIO_DEVICE_OUT_JACK)
-            modifiers[mod_idx++] = AUDIO_USE_CASE_MODIFIER_DUAL_MEDIA;
-        else
-            modifiers[mod_idx++] = AUDIO_USE_CASE_MODIFIER_MEDIA;
-    } else if (!strncmp("ringtone", route_info->role, MAX_NAME_LEN)) {
-        if (ah->device.active_out)
-            modifiers[mod_idx++] = AUDIO_USE_CASE_MODIFIER_RINGTONE;
-    } else {
-        if (ah->device.active_in)
-            modifiers[mod_idx++] = AUDIO_USE_CASE_MODIFIER_CAMCORDING;
-        else
-            modifiers[mod_idx++] = AUDIO_USE_CASE_MODIFIER_MEDIA;
-    }
-    audio_ret = _audio_ucm_set_modifiers (ah, verb, modifiers);
-#endif
     return audio_ret;
 }
 
@@ -273,6 +271,40 @@ static audio_return_t __update_route_voip(audio_hal_t *ah, device_info_t *device
     return audio_ret;
 }
 
+static audio_return_t __update_route_fmradio(audio_hal_t *ah, device_info_t *devices, int32_t num_of_devices)
+{
+    audio_return_t audio_ret = AUDIO_RET_OK;
+    const char *verb = mode_to_verb_str[VERB_RADIO];
+
+    AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
+    AUDIO_RETURN_VAL_IF_FAIL(devices, AUDIO_ERR_PARAMETER);
+
+    AUDIO_LOG_INFO("update_route_fmradio++");
+
+    if (!ah->device.fmradio_pcm_out) {
+        if ((audio_ret = _fmradio_pcm_open(ah))) {
+            AUDIO_LOG_ERROR("Failed to _fmradio_pcm_open(): error = 0x%x", audio_ret);
+            return audio_ret;
+        }
+        _audio_volume_set_level_radio(ah, 0);
+    }
+
+    audio_ret = __set_devices(ah, verb, devices, num_of_devices);
+    if (audio_ret) {
+        AUDIO_LOG_ERROR("Failed to set devices: error = 0x%x", audio_ret);
+        return audio_ret;
+    }
+    /* FIXME. If necessary, set VERB_VOIP */
+    ah->device.mode = VERB_RADIO;
+
+    _audio_volume_set_level_radio(ah, ah->volume.volume_level[AUDIO_VOLUME_TYPE_MEDIA]);
+    if ((audio_ret = __connect_fm_radio(ah)))
+        AUDIO_LOG_ERROR("failed to __connect_fm_radio(), ret(0x%x)", audio_ret);
+
+    /* TO DO: Set modifiers */
+    return audio_ret;
+}
+
 static audio_return_t __update_route_reset(audio_hal_t *ah, uint32_t direction)
 {
     audio_return_t audio_ret = AUDIO_RET_OK;
@@ -307,11 +339,16 @@ static audio_return_t __update_route_reset(audio_hal_t *ah, uint32_t direction)
         }
     }
     if (ah->device.mode == VERB_VOICECALL) {
-        _voice_pcm_close(ah, direction);
+        if ((audio_ret = _voice_pcm_close(ah, direction)))
+            AUDIO_LOG_ERROR("failed to _voice_pcm_close(), ret(0x%x)", audio_ret);
         if (!ah->device.active_in && !ah->device.active_out)
             ah->device.mode = VERB_NORMAL;
         __reset_voice_devices_info(ah);
         COND_SIGNAL(ah->device.device_cond, "device_cond");
+    } else if (ah->device.mode == VERB_RADIO) {
+        if ((audio_ret = _fmradio_pcm_close(ah)))
+            AUDIO_LOG_ERROR("failed to _fmradio_pcm_close(), ret(0x%x)", audio_ret);
+        ah->device.mode = VERB_NORMAL;
     }
 
     if (active_devices[0] == NULL) {
@@ -339,6 +376,7 @@ audio_return_t _audio_routing_init(audio_hal_t *ah)
     ah->device.active_in = 0x0;
     ah->device.active_out = 0x0;
     ah->device.mode = VERB_NORMAL;
+    ah->device.is_radio_on = 0;
 
     if ((audio_ret = _ucm_init(ah)))
         AUDIO_LOG_ERROR("failed to _ucm_init(), ret(0x%x)", audio_ret);
@@ -431,6 +469,10 @@ audio_return_t audio_update_route(void *audio_handle, audio_route_info_t *info)
     } else if (!strncmp("voip", info->role, MAX_NAME_LEN)) {
         if ((audio_ret = __update_route_voip(ah, devices, info->num_of_devices)))
             AUDIO_LOG_WARN("update voip route return 0x%x", audio_ret);
+
+    } else if (!strncmp("radio", info->role, MAX_NAME_LEN)) {
+        if ((audio_ret = __update_route_fmradio(ah, devices, info->num_of_devices)))
+            AUDIO_LOG_WARN("update radio route return 0x%x", audio_ret);
 
     } else if (!strncmp("reset", info->role, MAX_NAME_LEN)) {
         if ((audio_ret = __update_route_reset(ah, devices->direction)))
