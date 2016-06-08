@@ -143,7 +143,7 @@ typedef struct device_type {
 #define AUDIO_USE_CASE_VERB_VOICECALL               "Voice"
 #define AUDIO_USE_CASE_VERB_VIDEOCALL               "Video"
 #define AUDIO_USE_CASE_VERB_VOIP                    "VoIP"
-#define AUDIO_USE_CASE_VERB_LOOPBACK                "Loopback"
+#define AUDIO_USE_CASE_VERB_FMRADIO                 "DigitalFM"
 
 /* Modifiers */
 #define AUDIO_USE_CASE_MODIFIER_VOICESEARCH              "VoiceSearch"
@@ -183,7 +183,8 @@ typedef enum audio_route_mode {
     VERB_NORMAL,
     VERB_VOICECALL,
     VERB_VIDEOCALL,
-    VERB_VOIP
+    VERB_VOIP,
+    VERB_RADIO
 } audio_route_mode_t;
 
 typedef struct audio_hal_device {
@@ -191,17 +192,20 @@ typedef struct audio_hal_device {
     uint32_t active_out;
     snd_pcm_t *pcm_in;
     snd_pcm_t *pcm_out;
+    snd_pcm_t *fmradio_pcm_out;
     pthread_mutex_t pcm_lock;
     uint32_t pcm_count;
     device_info_t *init_call_devices;
     uint32_t num_of_call_devices;
     audio_route_mode_t mode;
+    uint32_t is_radio_on;
     pthread_cond_t device_cond;
     pthread_mutex_t device_lock;
 } audio_hal_device_t;
 
 /* Volume */
 #define AUDIO_VOLUME_LEVEL_MAX 16
+#define RADIO_VOLUME_MAX 16
 
 typedef enum audio_volume {
     AUDIO_VOLUME_TYPE_SYSTEM,           /**< System volume type */
@@ -244,6 +248,7 @@ enum {
 typedef struct audio_hal_volume {
     uint32_t volume_level[AUDIO_VOLUME_TYPE_MAX];
     audio_volume_value_table_t *volume_value_table;
+    int32_t radio_volume_value_table[RADIO_VOLUME_MAX];
 } audio_hal_volume_t;
 
 /* UCM */
@@ -337,6 +342,7 @@ audio_return_t _audio_comm_deinit(audio_hal_t *ah);
 audio_return_t _audio_update_route_voicecall(audio_hal_t *ah, device_info_t *devices, int32_t num_of_devices);
 int _audio_modem_is_call_connected(audio_hal_t *ah);
 audio_return_t _audio_comm_send_message(audio_hal_t *ah, const char *name, int value);
+audio_return_t _audio_volume_set_level_radio(audio_hal_t *ah, uint32_t level);
 
 typedef struct _dump_data {
     char *strbuf;

@@ -183,16 +183,83 @@ static int __tinyalsa_pcm_recover(struct pcm *pcm, int err)
 }
 #endif
 
-int _voice_pcm_open(audio_hal_t *ah)
+audio_return_t _fmradio_pcm_open(audio_hal_t *ah)
+{
+    audio_return_t audio_ret = AUDIO_RET_OK;
+    int ret = 0;
+    const char *device_name = NULL;
+    audio_pcm_sample_spec_t sample_spec;
+    uint8_t use_mmap = 0;
+    sample_spec.rate = 44100;
+    sample_spec.channels = 2;
+    sample_spec.format = SND_PCM_FORMAT_S16_LE;
+
+    if ((audio_ret = _ucm_get_device_name(ah, AUDIO_USE_CASE_VERB_FMRADIO, AUDIO_DIRECTION_OUT, &device_name)))
+        goto error_exit;
+
+#ifdef __USE_TINYALSA__
+    AUDIO_LOG_WARN("need implementation for tinyAlsa");
+    return AUDIO_ERR_NOT_IMPLEMENTED;
+#else
+    if (device_name) {
+        if((ret = snd_pcm_open((snd_pcm_t **)&ah->device.fmradio_pcm_out, (char *)device_name, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
+            AUDIO_LOG_ERROR("[%s] out pcm_open failed", device_name);
+            audio_ret = AUDIO_ERR_IOCTL;
+            goto error_exit;
+        }
+        AUDIO_LOG_INFO("[%s] out pcm_open success:%p", device_name, ah->device.fmradio_pcm_out);
+
+        if ((audio_ret = _pcm_set_hw_params(ah->device.fmradio_pcm_out, &sample_spec, &use_mmap, NULL, NULL)) < 0) {
+            AUDIO_LOG_ERROR("[%s] out __set_pcm_hw_params failed", device_name);
+            if ((audio_ret = _pcm_close(ah->device.pcm_out)))
+                AUDIO_LOG_ERROR("failed to _pcm_close(), ret(0x%x)", audio_ret);
+            ah->device.fmradio_pcm_out = NULL;
+            goto error_exit;
+        }
+    }
+#endif
+
+error_exit:
+    if (device_name)
+        free((void*)device_name);
+
+    return audio_ret;
+}
+
+audio_return_t _fmradio_pcm_close(audio_hal_t *ah)
+{
+    audio_return_t audio_ret = AUDIO_RET_OK;
+
+    AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
+
+    AUDIO_LOG_INFO("close fmradio pcm handles");
+
+    if (ah->device.fmradio_pcm_out) {
+        if ((audio_ret = _pcm_close(ah->device.fmradio_pcm_out)))
+            AUDIO_LOG_ERROR("failed to _fmradio_pcm_close() for pcm_out, ret(0x%x)", audio_ret);
+        else {
+            ah->device.fmradio_pcm_out = NULL;
+            AUDIO_LOG_INFO("fmradio pcm_out handle close success");
+        }
+    }
+
+    return audio_ret;
+}
+
+audio_return_t _voice_pcm_open(audio_hal_t *ah)
 {
     int err, ret = 0;
 
     AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
 
+#ifdef __USE_TINYALSA__
+    AUDIO_LOG_WARN("need implementation for tinyAlsa");
+    return AUDIO_ERR_NOT_IMPLEMENTED;
+#else
     AUDIO_LOG_INFO("open voice pcm handles");
 
     /* Get playback voice-pcm from ucm conf. Open and set-params */
-    if ((err = snd_pcm_open((snd_pcm_t **)&ah->device.pcm_out, VOICE_PCM_DEVICE, AUDIO_DIRECTION_OUT, 0)) < 0) {
+    if ((err = snd_pcm_open((snd_pcm_t **)&ah->device.pcm_out, VOICE_PCM_DEVICE, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
         AUDIO_LOG_ERROR("snd_pcm_open for %s failed. %s", VOICE_PCM_DEVICE, snd_strerror(err));
         return AUDIO_ERR_IOCTL;
     }
@@ -201,51 +268,70 @@ int _voice_pcm_open(audio_hal_t *ah)
     AUDIO_LOG_INFO("pcm playback device open success device(%s)", VOICE_PCM_DEVICE);
 
     /* Get capture voice-pcm from ucm conf. Open and set-params */
-    if ((err = snd_pcm_open((snd_pcm_t **)&ah->device.pcm_in, VOICE_PCM_DEVICE, AUDIO_DIRECTION_IN, 0)) < 0) {
+    if ((err = snd_pcm_open((snd_pcm_t **)&ah->device.pcm_in, VOICE_PCM_DEVICE, SND_PCM_STREAM_CAPTURE, 0)) < 0) {
         AUDIO_LOG_ERROR("snd_pcm_open for %s failed. %s", VOICE_PCM_DEVICE, snd_strerror(err));
         return AUDIO_ERR_IOCTL;
     }
     ret = __voice_pcm_set_params(ah, ah->device.pcm_in);
     AUDIO_LOG_INFO("pcm captures device open success device(%s)", VOICE_PCM_DEVICE);
+#endif
 
-    return ret;
+    return (ret == 0 ? AUDIO_RET_OK : AUDIO_ERR_INTERNAL);
 }
 
-int _voice_pcm_close(audio_hal_t *ah, uint32_t direction)
+audio_return_t _voice_pcm_close(audio_hal_t *ah, uint32_t direction)
 {
+    audio_return_t audio_ret = AUDIO_RET_OK;
+
     AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
 
     AUDIO_LOG_INFO("close voice pcm handles");
 
     if (ah->device.pcm_out && (direction == AUDIO_DIRECTION_OUT)) {
-        _pcm_close(ah->device.pcm_out);
-        ah->device.pcm_out = NULL;
-        AUDIO_LOG_INFO("voice pcm_out handle close success");
+        if ((audio_ret = _pcm_close(ah->device.pcm_out)))
+            AUDIO_LOG_ERROR("failed to _pcm_close() for pcm_out, ret(0x%x)", audio_ret);
+        else {
+            ah->device.pcm_out = NULL;
+            AUDIO_LOG_INFO("voice pcm_out handle close success");
+        }
     } else if (ah->device.pcm_in && (direction == AUDIO_DIRECTION_IN)) {
-        _pcm_close(ah->device.pcm_in);
-        ah->device.pcm_in = NULL;
-        AUDIO_LOG_INFO("voice pcm_in handle close success");
+        if ((audio_ret = _pcm_close(ah->device.pcm_in)))
+            AUDIO_LOG_ERROR("failed to _pcm_close() for pcm_in, ret(0x%x)", audio_ret);
+        else {
+            ah->device.pcm_in = NULL;
+            AUDIO_LOG_INFO("voice pcm_in handle close success");
+        }
     }
 
-    return AUDIO_RET_OK;
+    return audio_ret;
 }
 
-void _reset_pcm_devices(audio_hal_t *ah)
+audio_return_t _reset_pcm_devices(audio_hal_t *ah)
 {
-    AUDIO_RETURN_IF_FAIL(ah);
+    audio_return_t audio_ret = AUDIO_RET_OK;
+
+    AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
 
     if (ah->device.pcm_out) {
-        _pcm_close(ah->device.pcm_out);
-        ah->device.pcm_out = NULL;
-        AUDIO_LOG_INFO("pcm_out handle close success");
+        if (!(audio_ret = _pcm_close(ah->device.pcm_out))) {
+            ah->device.pcm_out = NULL;
+            AUDIO_LOG_INFO("pcm_out handle close success");
+        }
     }
     if (ah->device.pcm_in) {
-        _pcm_close(ah->device.pcm_in);
-        ah->device.pcm_in = NULL;
-        AUDIO_LOG_INFO("pcm_in handle close success");
+        if (!(audio_ret = _pcm_close(ah->device.pcm_in))) {
+            ah->device.pcm_in = NULL;
+            AUDIO_LOG_INFO("pcm_in handle close success");
+        }
+    }
+    if (ah->device.fmradio_pcm_out) {
+        if (!(audio_ret = _pcm_close(ah->device.fmradio_pcm_out))) {
+            ah->device.fmradio_pcm_out = NULL;
+            AUDIO_LOG_INFO("fmradio_pcm_out handle close success");
+        }
     }
 
-    return;
+    return audio_ret;
 }
 
 audio_return_t _pcm_open(void **pcm_handle, uint32_t direction, void *sample_spec, uint32_t period_size, uint32_t periods)

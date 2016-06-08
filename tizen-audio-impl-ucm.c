@@ -122,6 +122,24 @@ audio_return_t _ucm_deinit(audio_hal_t *ah)
     return AUDIO_RET_OK;
 }
 
+audio_return_t _ucm_get_device_name(audio_hal_t *ah, const char *use_case, audio_direction_t direction, const char **value)
+{
+    char identifier[70] = { 0, };
+
+    AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
+    AUDIO_RETURN_VAL_IF_FAIL(use_case, AUDIO_ERR_PARAMETER);
+    AUDIO_RETURN_VAL_IF_FAIL(ah->ucm.uc_mgr, AUDIO_ERR_PARAMETER);
+
+    snprintf(identifier, sizeof(identifier), "%sPCM//%s",
+             (direction == AUDIO_DIRECTION_IN) ? "Capture" : "Playback", use_case);
+
+    snd_use_case_get(ah->ucm.uc_mgr, identifier, value);
+
+    AUDIO_LOG_INFO("get device name : [%s]", *value);
+
+    return AUDIO_RET_OK;
+}
+
 /* UCM sequence
     1) If verb is null or verb is not changed
     1-1) If device is changed

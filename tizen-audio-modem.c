@@ -34,25 +34,6 @@
 #include "tizen-audio-impl.h"
 
 #define vbc_thread_new pthread_create
-#define MIXER_VBC_SWITCH                            "VBC Switch"
-/* pin_switch */
-#define PIN_SWITCH_IIS0_SYS_SEL              "IIS0 pin select"
-#define PIN_SWITCH_IIS0_AP_ID                0
-#define PIN_SWITCH_IIS0_CP0_ID               1
-#define PIN_SWITCH_IIS0_CP1_ID               2
-#define PIN_SWITCH_IIS0_CP2_ID               3
-#define PIN_SWITCH_IIS0_VBC_ID               4
-
-#define PIN_SWITCH_BT_IIS_SYS_SEL            "BT IIS pin select"
-#define PIN_SWITCH_BT_IIS_CP0_IIS0_ID        0
-#define PIN_SWITCH_BT_IIS_CP1_IIS0_ID        4
-#define PIN_SWITCH_BT_IIS_AP_IIS0_ID         8
-
-#define PIN_SWITCH_BT_IIS_CON_SWITCH         "BT IIS con switch"
-
-#define VBC_TD_CHANNELID                            0  /*  cp [3g] */
-#define VBC_ARM_CHANNELID                           2  /*  ap */
-
 #define VBPIPE_DEVICE           "/dev/spipe_w6"
 #define VBPIPE_VOIP_DEVICE      "/dev/spipe_w4"
 #define VBC_CMD_TAG             "VBC"
@@ -173,16 +154,6 @@ static int __write_nonblock(int fd, void *buf, int bytes)
 
 }
 
-int _audio_modem_is_call_connected(audio_hal_t *ah)
-{
-    int val = -1; /* Mixer values 0 - cp [3g] ,1 - cp [2g] ,2 - ap */
-
-    _mixer_control_get_value(ah, MIXER_VBC_SWITCH, &val);
-    AUDIO_LOG_INFO("modem is connected for call = %d", (val == VBC_TD_CHANNELID));
-
-    return (val == VBC_TD_CHANNELID) ? 1 : 0;
-}
-
 static int __vbc_write_response(int fd, unsigned int cmd, uint32_t paras_size)
 {
     int ret = 0;
@@ -202,7 +173,16 @@ static int __vbc_write_response(int fd, unsigned int cmd, uint32_t paras_size)
     return 0;
 }
 
-#define FM_IIS                                      0x10
+int _audio_modem_is_call_connected(audio_hal_t *ah)
+{
+    int val = -1; /* Mixer values 0 - cp [3g] ,1 - cp [2g] ,2 - ap */
+
+    _mixer_control_get_value(ah, MIXER_VBC_SWITCH, &val);
+    AUDIO_LOG_INFO("modem is connected for call = %d", (val == VBC_TD_CHANNELID));
+
+    return (val == VBC_TD_CHANNELID) ? 1 : 0;
+}
+
 static void __i2s_pin_mux_sel(audio_hal_t *ah, int type)
 {
     audio_return_t ret = AUDIO_RET_OK;
@@ -216,11 +196,6 @@ static void __i2s_pin_mux_sel(audio_hal_t *ah, int type)
     AUDIO_LOG_INFO("type is %d",type);
     modem = ah->modem.cp;
 
-    if (type == FM_IIS) {
-        _mixer_control_set_value(ah,
-                    PIN_SWITCH_IIS0_SYS_SEL, PIN_SWITCH_IIS0_VBC_ID);
-        return;
-    }
     if (type == 0) {
        if(ah->device.active_out & AUDIO_DEVICE_OUT_BT_SCO) {
             if(modem->i2s_bt.is_ext) {
