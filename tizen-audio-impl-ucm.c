@@ -387,7 +387,18 @@ audio_return_t _ucm_set_devices(audio_hal_t *ah, const char *verb, const char *d
     __dump_use_case(UCM_PREFIX_CURRENT, old_verb, old_dev_list, old_dev_count, NULL, 0);
 
     if (devices) {
-        for (dev_count = 0; devices[dev_count]; dev_count++);
+        if (streq(verb, "Voice")) {
+            /* In case of Voice verb with Bluetooth device, make this device alone */
+            for (dev_count = 0; devices[dev_count]; dev_count++) {
+                if (streq(devices[dev_count], "Bluetooth")) {
+                    devices = &devices[dev_count];
+                    dev_count = 1;
+                    AUDIO_LOG_DEBUG("Voice verb with Bluetooth device only");
+                    break;
+                }
+            }
+        } else
+            for (dev_count = 0; devices[dev_count]; dev_count++);
     }
 
     __dump_use_case(UCM_PREFIX_REQUESTED, verb, devices, dev_count, NULL, 0);
