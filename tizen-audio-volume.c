@@ -310,11 +310,12 @@ static audio_return_t __load_radio_volume_table(int** volume_table, int *number_
     }
 
     *number_of_elements = iniparser_getint(dict, RADIO_TUNING_VOLUME_LEVELS, -1);
-    if (*number_of_elements == -1) {
+    if (*number_of_elements <= 0) {
+        AUDIO_LOG_ERROR("invalid number of elements, %d", *number_of_elements);
         ret = AUDIO_ERR_INTERNAL;
         goto error;
     }
-        temp_table = (int *)malloc ((*number_of_elements) * sizeof(int));
+    temp_table = (int *)malloc((*number_of_elements) * sizeof(int));
     if (!temp_table) {
         goto error;
     }
