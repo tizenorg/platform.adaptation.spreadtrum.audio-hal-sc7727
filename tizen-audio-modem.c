@@ -724,6 +724,9 @@ static void __audio_modem_start_tag(void *data, const XML_Char *tag_name,
             AUDIO_LOG_ERROR("no modem num!");
         }
     } else if (strcmp(tag_name, "cp") == 0) {
+        static int modem_index = 0;
+        vbc_ctrl_pipe_para_t *para = &modem->vbc_ctrl_pipe_info[modem_index];
+
         if (modem->vbc_ctrl_pipe_info) {
             /* Obtain the modem name  \pipe\vbc   filed */
             if (strcmp(attr[0], "name") != 0) {
@@ -741,15 +744,15 @@ static void __audio_modem_start_tag(void *data, const XML_Char *tag_name,
             AUDIO_LOG_DEBUG("cp name is '%s', pipe is '%s',vbc is '%s'", attr[1], attr[3],attr[5]);
             if(strcmp(attr[1], "w") == 0)
             {
-                modem->vbc_ctrl_pipe_info->cp_type = CP_W;
+                para->cp_type = CP_W;
             }
             else if(strcmp(attr[1], "t") == 0)
             {
-                modem->vbc_ctrl_pipe_info->cp_type = CP_TG;
+                para->cp_type = CP_TG;
             }
-            memcpy((void*)modem->vbc_ctrl_pipe_info->s_vbc_ctrl_pipe_name,(void*)attr[3],strlen((char *)attr[3]));
-            modem->vbc_ctrl_pipe_info->channel_id = atoi((char *)attr[5]);
-            modem->vbc_ctrl_pipe_info++;
+            memcpy((void*)para->s_vbc_ctrl_pipe_name,(void*)attr[3],strlen((char *)attr[3]));
+            para->channel_id = atoi((char *)attr[5]);
+            modem_index++;
 
         } else {
             AUDIO_LOG_ERROR("error profile!");
@@ -927,7 +930,9 @@ audio_return_t _audio_modem_init(audio_hal_t *ah)
         AUDIO_LOG_ERROR("modem parse failed");
         goto exit;
     }
-    ah->modem.cp_type = ah->modem.cp->vbc_ctrl_pipe_info->cp_type;
+
+    /* FIXME : Use cp type of first modem explicitly */
+    ah->modem.cp_type = ah->modem.cp->vbc_ctrl_pipe_info[0].cp_type;
 
     /* This ctrl need to be set "0" always - SPRD */
     _mixer_control_set_value(ah, PIN_SWITCH_BT_IIS_CON_SWITCH, 0);
@@ -945,4 +950,3 @@ audio_return_t _audio_modem_deinit(audio_hal_t *ah)
 
     return AUDIO_RET_OK;
 }
-
