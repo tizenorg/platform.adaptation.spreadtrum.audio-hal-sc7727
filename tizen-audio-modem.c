@@ -927,6 +927,9 @@ audio_return_t _audio_modem_init(audio_hal_t *ah)
         AUDIO_LOG_ERROR("modem parse failed");
         goto exit;
     }
+    /* Returning pointer to vbc_ctrl_pipe_info array start */
+    ah->modem.cp->vbc_ctrl_pipe_info -= ah->modem.cp->num;
+
     ah->modem.cp_type = ah->modem.cp->vbc_ctrl_pipe_info->cp_type;
 
     /* This ctrl need to be set "0" always - SPRD */
@@ -945,4 +948,3 @@ audio_return_t _audio_modem_deinit(audio_hal_t *ah)
 
     return AUDIO_RET_OK;
 }
-
