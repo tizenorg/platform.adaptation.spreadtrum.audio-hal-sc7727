@@ -40,6 +40,7 @@
 #define RADIO_TUNING_ENABLE         "tuning:enable"
 #define RADIO_TUNING_VOLUME_LEVELS  "fmradio:volume_levels"
 #define RADIO_TUNING_VOLUME_TABLE   "fmradio:volume_table"
+#define RADIO_VOLUME_NUM_MAX        100
 
 static const char *g_volume_vconf[AUDIO_VOLUME_TYPE_MAX] = {
     "file/private/sound/volume/system",         /* AUDIO_VOLUME_TYPE_SYSTEM */
@@ -310,15 +311,15 @@ static audio_return_t __load_radio_volume_table(int** volume_table, int *number_
     }
 
     *number_of_elements = iniparser_getint(dict, RADIO_TUNING_VOLUME_LEVELS, -1);
-    if (*number_of_elements <= 0) {
+    if (*number_of_elements <= 0 || *number_of_elements > RADIO_VOLUME_NUM_MAX) {
         AUDIO_LOG_ERROR("invalid number of elements, %d", *number_of_elements);
         ret = AUDIO_ERR_INTERNAL;
         goto error;
     }
     temp_table = (int *)malloc((*number_of_elements) * sizeof(int));
-    if (!temp_table) {
+    if (!temp_table)
         goto error;
-    }
+
     *volume_table = temp_table;
 
     list_str = iniparser_getstring(dict, RADIO_TUNING_VOLUME_TABLE, NULL);
