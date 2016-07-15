@@ -142,7 +142,7 @@ static void __dump_tb(audio_hal_t *ah)
         snprintf(dump_str_ptr, 8, "%6s:", vol_type_str);
         dump_str_ptr += strlen(dump_str_ptr);
 
-        for (vol_level_idx = 0; vol_level_idx < volume_value_table->volume_level_max[vol_type_idx]; vol_level_idx++) {
+        for (vol_level_idx = 0; vol_level_idx < ah->volume.volume_level_max[vol_type_idx]; vol_level_idx++) {
             snprintf(dump_str_ptr, 6, "%01.2f ", volume_value_table->volume[vol_type_idx][vol_level_idx]);
             dump_str_ptr += strlen(dump_str_ptr);
         }
@@ -205,7 +205,7 @@ static audio_return_t __load_volume_value_table_from_ini(audio_hal_t *ah)
     for (vol_type_idx = 0; vol_type_idx < AUDIO_VOLUME_TYPE_MAX; vol_type_idx++) {
         const char *vol_type_str = __get_volume_type_string_by_idx(vol_type_idx);
 
-        volume_value_table->volume_level_max[vol_type_idx] = 0;
+        ah->volume.volume_level_max[vol_type_idx] = 0;
         size = strlen(table_str) + strlen(vol_type_str) + 2;
         key = malloc(size);
         if (key) {
@@ -218,11 +218,11 @@ static audio_return_t __load_volume_value_table_from_ini(audio_hal_t *ah)
                     double vol_value = 0.0f;
                     if (strncmp(token, "0", strlen(token)))
                         vol_value = pow(10.0, (atof(token) - 100) / 20.0);
-                    volume_value_table->volume[vol_type_idx][volume_value_table->volume_level_max[vol_type_idx]++] = vol_value;
+                    volume_value_table->volume[vol_type_idx][ah->volume.volume_level_max[vol_type_idx]++] = vol_value;
                     token = strtok_r(NULL, delimiter, &ptr);
                 }
             } else {
-                volume_value_table->volume_level_max[vol_type_idx] = 1;
+                ah->volume.volume_level_max[vol_type_idx] = 1;
                 for (vol_level_idx = 0; vol_level_idx < AUDIO_VOLUME_LEVEL_MAX; vol_level_idx++) {
                     volume_value_table->volume[vol_type_idx][vol_level_idx] = VOLUME_VALUE_MAX;
                 }
@@ -340,9 +340,10 @@ error:
 audio_return_t _audio_volume_set_level_radio(audio_hal_t *ah, uint32_t level)
 {
     audio_return_t audio_ret = AUDIO_RET_OK;
-
     int volume = 0;
     int mute = -1;
+
+    AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
 
     /* Applying mute at volume zero */
     if (level == 0) {
@@ -452,14 +453,13 @@ audio_return_t _audio_volume_deinit(audio_hal_t *ah)
 audio_return_t audio_get_volume_level_max(void *audio_handle, audio_volume_info_t *info, uint32_t *level)
 {
     audio_hal_t *ah = (audio_hal_t *)audio_handle;
-    audio_volume_value_table_t *volume_value_table;
 
     AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
-    AUDIO_RETURN_VAL_IF_FAIL(ah->volume.volume_value_table, AUDIO_ERR_PARAMETER);
+    AUDIO_RETURN_VAL_IF_FAIL(info, AUDIO_ERR_PARAMETER);
+    AUDIO_RETURN_VAL_IF_FAIL(level, AUDIO_ERR_PARAMETER);
 
     /* Get max volume level by device & type */
-    volume_value_table = ah->volume.volume_value_table;
-    *level = volume_value_table->volume_level_max[__get_volume_idx_by_string_type(info->type)];
+    *level = ah->volume.volume_level_max[__get_volume_idx_by_string_type(info->type)];
 
     AUDIO_LOG_DEBUG("get_[%s] volume_level_max: %d", info->type, *level);
 
@@ -471,6 +471,8 @@ audio_return_t audio_get_volume_level(void *audio_handle, audio_volume_info_t *i
     audio_hal_t *ah = (audio_hal_t *)audio_handle;
 
     AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
+    AUDIO_RETURN_VAL_IF_FAIL(info, AUDIO_ERR_PARAMETER);
+    AUDIO_RETURN_VAL_IF_FAIL(level, AUDIO_ERR_PARAMETER);
 
     *level = ah->volume.volume_level[__get_volume_idx_by_string_type(info->type)];
 
@@ -486,11 +488,13 @@ audio_return_t audio_get_volume_value(void *audio_handle, audio_volume_info_t *i
     char dump_str[AUDIO_DUMP_STR_LEN] = {0,};
 
     AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
+    AUDIO_RETURN_VAL_IF_FAIL(info, AUDIO_ERR_PARAMETER);
+    AUDIO_RETURN_VAL_IF_FAIL(value, AUDIO_ERR_PARAMETER);
     AUDIO_RETURN_VAL_IF_FAIL(ah->volume.volume_value_table, AUDIO_ERR_PARAMETER);
 
     /* Get basic volume by device & type & level */
     volume_value_table = ah->volume.volume_value_table;
-    if (volume_value_table->volume_level_max[__get_volume_idx_by_string_type(info->type)] < level)
+    if (ah->volume.volume_level_max[__get_volume_idx_by_string_type(info->type)] < level)
         *value = VOLUME_VALUE_MAX;
     else
         *value = volume_value_table->volume[__get_volume_idx_by_string_type(info->type)][level];
@@ -507,6 +511,8 @@ audio_return_t audio_set_volume_level(void *audio_handle, audio_volume_info_t *i
     audio_hal_t *ah = (audio_hal_t *)audio_handle;
 
     AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
+    AUDIO_RETURN_VAL_IF_FAIL(info, AUDIO_ERR_PARAMETER);
+    AUDIO_RETURN_VAL_IF_FAIL((ah->volume.volume_level_max[__get_volume_idx_by_string_type(info->type)] >= level), AUDIO_ERR_PARAMETER);
 
     /* Update volume level */
     ah->volume.volume_level[__get_volume_idx_by_string_type(info->type)] = level;
@@ -525,6 +531,8 @@ audio_return_t audio_get_volume_mute(void *audio_handle, audio_volume_info_t *in
     audio_hal_t *ah = (audio_hal_t *)audio_handle;
 
     AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
+    AUDIO_RETURN_VAL_IF_FAIL(info, AUDIO_ERR_PARAMETER);
+    AUDIO_RETURN_VAL_IF_FAIL(mute, AUDIO_ERR_PARAMETER);
 
     /* TODO. Not implemented */
 
@@ -537,6 +545,8 @@ audio_return_t audio_set_volume_mute(void *audio_handle, audio_volume_info_t *in
     audio_hal_t *ah = (audio_hal_t *)audio_handle;
 
     AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
+    AUDIO_RETURN_VAL_IF_FAIL(info, AUDIO_ERR_PARAMETER);
+
     /* TODO. Not implemented */
 
     return audio_ret;

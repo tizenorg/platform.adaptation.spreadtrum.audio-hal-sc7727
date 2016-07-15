@@ -44,6 +44,8 @@ audio_return_t audio_notify_stream_connection_changed(void *audio_handle, audio_
 
     AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
     AUDIO_RETURN_VAL_IF_FAIL(info, AUDIO_ERR_PARAMETER);
+    AUDIO_RETURN_VAL_IF_FAIL(info->role, AUDIO_ERR_PARAMETER);
+    AUDIO_RETURN_VAL_IF_FAIL((info->direction <= AUDIO_DIRECTION_OUT), AUDIO_ERR_PARAMETER);
 
     AUDIO_LOG_INFO("role:%s, direction:%u, idx:%u, is_connected:%d", info->role, info->direction, info->idx, is_connected);
     if (streq(info->role, "radio")) {
