@@ -407,6 +407,7 @@ audio_return_t audio_update_route(void *audio_handle, audio_route_info_t *info)
 
     AUDIO_RETURN_VAL_IF_FAIL(ah, AUDIO_ERR_PARAMETER);
     AUDIO_RETURN_VAL_IF_FAIL(info, AUDIO_ERR_PARAMETER);
+    AUDIO_RETURN_VAL_IF_FAIL(info->role, AUDIO_ERR_PARAMETER);
 
     AUDIO_LOG_INFO("role:%s", info->role);
 
