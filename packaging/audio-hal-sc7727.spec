@@ -1,6 +1,6 @@
 Name:       audio-hal-sc7727
 Summary:    TIZEN Audio HAL for SC7727
-Version:    0.1.17
+Version:    0.1.18
 Release:    0
 Group:      System/Libraries
 License:    Apache-2.0
